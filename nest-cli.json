@@ -1,0 +1,29 @@
+{
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "generateOptions": {
+    "flat": true
+  },
+  "root": "./",
+  "compilerOptions": {
+    "assets": [
+      {
+        "include": "./db",
+        "watchAssets": true,
+        "outDir": "dist"
+      },
+      {
+        "include": "**/views/*",
+        "watchAssets": true,
+        "outDir": "dist/src/"
+      },
+
+      {
+        "include": "**/templates/*",
+        "watchAssets": true,
+        "outDir": "dist/src/"
+      }
+    ],
+    "watchAssets": true
+  }
+}

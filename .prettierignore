@@ -1,0 +1,11 @@
+app 
+dist
+public
+db
+**/template/*
+
+.env.*
+.lintstagedrc
+.prettierignore
+.eslintignore
+package*
