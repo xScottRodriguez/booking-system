@@ -12,15 +12,21 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
-      "@root/*": ["./*"],
-      "@/*": ["src/*"]
+      "@root/*": [
+        "./*"
+      ],
+      "@/*": [
+        "src/*"
+      ]
     },
     "incremental": true,
-    "skipLibCheck": true,
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "types": [
+      "node"
+    ]
   }
 }

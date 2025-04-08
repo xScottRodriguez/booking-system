@@ -13,6 +13,7 @@ import { EncoderService } from './encoder/encoder.service';
 import User from './entities/auth.entity';
 import { GoogleStrategy } from './strategies/google-strategy';
 import { JwtStrategy } from './strategies/jwtStrategy';
+import { UserRepository } from './repository/users.repository';
 
 @Module({
   imports: [
@@ -32,7 +33,7 @@ import { JwtStrategy } from './strategies/jwtStrategy';
     RoleModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, EncoderService, JwtStrategy, GoogleStrategy],
+  providers: [AuthService, EncoderService, JwtStrategy, GoogleStrategy, UserRepository],
   exports: [JwtStrategy, PassportModule],
 })
-export class AuthModule {}
+export class AuthModule { }

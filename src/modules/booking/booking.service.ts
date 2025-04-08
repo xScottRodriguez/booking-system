@@ -10,7 +10,6 @@ import { Repository } from 'typeorm';
 
 import { OrderType } from '@/enums/sort-enum';
 import User from '@/modules/auth/entities/auth.entity';
-import { Services } from '@/modules/booking-services/entities/services.entity';
 import { RoleService } from '@/modules/role/role.service';
 import { Status } from '@/modules/status/entities/status.entity';
 
@@ -25,8 +24,6 @@ export class BookingService {
     @InjectRepository(Booking)
     private readonly bookingRepository: Repository<Booking>,
 
-    @InjectRepository(Services)
-    private readonly servicesRepository: Repository<Services>,
 
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -35,9 +32,9 @@ export class BookingService {
     private readonly statusRepository: Repository<Status>,
 
     private readonly roleService: RoleService,
-  ) {}
+  ) { }
   async create(createBookingDto: CreateBookingDto) {
-    const { client, service, status } = await this.findServiceClientStatus(
+    const { client, status } = await this.findServiceClientStatus(
       createBookingDto.serviceId,
       createBookingDto.clientId,
     );
@@ -47,7 +44,6 @@ export class BookingService {
       ...createBookingDto,
       date: formatDate,
       clientId: new User(client),
-      serviceId: service,
       statusId: status,
     });
     const dateToCheck = new Date(createBookingDto.date);
@@ -95,15 +91,10 @@ export class BookingService {
     }
   }
   async findServiceClientStatus(
-    serviceId: number,
     clientId: number,
     stateId?: number,
-  ): Promise<{ service: Services; client: User; status: Status }> {
-    const service = await this.servicesRepository.findOne({
-      where: { id: serviceId },
-    });
+  ): Promise<{ client: User; status: Status }> {
 
-    if (!service) throw new NotFoundException('Service not found');
 
     const client = await this.userRepository.findOne({
       where: { id: clientId },
@@ -123,7 +114,7 @@ export class BookingService {
 
     if (!status) throw new NotFoundException('Status not found');
 
-    return { service, client, status };
+    return { client, status };
   }
 
   async findAll(user: User) {
@@ -134,7 +125,6 @@ export class BookingService {
         return await this.bookingRepository.find({
           relations: {
             clientId: { role: true },
-            serviceId: true,
             statusId: true,
           },
           order: {
@@ -145,7 +135,6 @@ export class BookingService {
       return await this.bookingRepository.find({
         relations: {
           clientId: true,
-          serviceId: true,
           statusId: true,
         },
         where: {
@@ -165,16 +154,14 @@ export class BookingService {
 
     if (!existsBooking) throw new BadRequestException('Booking not found');
 
-    const { client, service, status } = await this.findServiceClientStatus(
+    const { client, status } = await this.findServiceClientStatus(
       updateBookingDto.serviceId,
       updateBookingDto.clientId,
-      updateBookingDto.stateId,
     );
 
     const bookingToSave = this.bookingRepository.create({
       ...updateBookingDto,
       clientId: new User(client),
-      serviceId: service,
       statusId: status,
     });
     const isValidBooking = await this.checkReservationValid(

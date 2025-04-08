@@ -6,7 +6,6 @@ import * as admin from 'firebase-admin';
 import { Repository } from 'typeorm';
 
 import User from '../auth/entities/auth.entity';
-import { Services } from '../booking-services/entities/services.entity';
 import { Status } from '../status/entities/status.entity';
 import { Booking } from './entities/booking.entity';
 import {
@@ -22,7 +21,7 @@ export class NotificationService {
     private userRepository: Repository<User>,
     @InjectRepository(Booking)
     private bookingRepository: Repository<Booking>,
-  ) {}
+  ) { }
 
   async searchOrdersByPreviousDate(): Promise<IBookingsNotifications[]> {
     const STATUS_ID = 1;
@@ -36,7 +35,6 @@ export class NotificationService {
         .addSelect('booking.note', 'note')
         .addSelect('booking.date', 'date')
         .leftJoin(User, 'users', 'users.id = booking.client_id')
-        .leftJoin(Services, 'services', 'services.id = booking.service_id')
         .leftJoin(Status, 'status', 'status.id = booking.status_id')
         .where(
           `DATE("booking"."date") = DATE_TRUNC('day', NOW()) + INTERVAL '2 days'`,

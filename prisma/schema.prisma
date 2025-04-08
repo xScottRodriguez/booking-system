@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model booking {
+  id       Int     @id @default(autoincrement())
+  date     String  @db.VarChar(10)
+  hour     String  @db.VarChar(8)
+  clientId Int?    @map("client_id")
+  statusId Int?    @map("status_id")
+  users    users?  @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_booking_client")
+  status   status? @relation(fields: [statusId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_booking_status")
+}
+
+model roles {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique(map: "unique_role_name") @db.VarChar(100)
+  description String? @db.VarChar(200)
+  users       users[]
+}
+
+model status {
+  id      Int       @id @default(autoincrement())
+  name    String    @unique(map: "unique_status_name") @db.VarChar(12)
+  booking booking[]
+}
+
+model users {
+  id                 Int       @id @default(autoincrement())
+  username           String    @db.VarChar
+  email              String    @unique(map: "unique_user_email")
+  password           String?
+  isActive           Boolean   @default(false) @map("is_active")
+  isGoogleAccount    Boolean   @default(false) @map("is_google_account")
+  activationToken    String?   @unique(map: "unique_activation_token") @map("activation_token") @db.VarChar
+  resetPasswordToken String?   @unique(map: "unique_reset_password_token") @map("reset_password_token") @db.VarChar
+  roleId             Int?      @map("role_id")
+  booking            booking[]
+  roles              roles?    @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_users_roles")
+}

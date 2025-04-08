@@ -10,7 +10,7 @@ import { join } from 'path';
 import { AppModule } from '@/app.module';
 import { ConfigurationService } from '@/config/configuration';
 
-import * as serviceAccount from '@root/candyApiKey.json';
+//import * as serviceAccount from '@root/candyApiKey.json';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -80,13 +80,12 @@ async function bootstrap() {
   SwaggerModule.setup(`${APP_ROUTE_PREFIX}/:version/docs`, app, document);
 
   if (!admin.apps.length) {
-    const serviceAccountObj = JSON.parse(JSON.stringify(serviceAccount));
-    const credentials = admin.credential.cert(serviceAccountObj);
-
-    admin.initializeApp({
-      credential: credentials,
-      // aquí puedes agregar opciones adicionales de configuración si lo necesitas
-    });
+    // const serviceAccountObj = JSON.parse(JSON.stringify(serviceAccount));
+    //const credentials = admin.credential.cert(serviceAccountObj);
+    // admin.initializeApp({
+    //  credential: credentials,
+    // aquí puedes agregar opciones adicionales de configuración si lo necesitas
+    // });
   }
 
   await app.listen(port, async () => {

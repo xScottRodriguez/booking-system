@@ -14,7 +14,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { AxiosError } from 'axios';
 import { catchError, firstValueFrom } from 'rxjs';
 import { Repository } from 'typeorm';
-import { v4 } from 'uuid';
 
 import { IGoogleAccount } from '@/interfaces/gogle.interface';
 import { MailService } from '@/modules/mail/mail.service';
@@ -30,6 +29,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { EncoderService } from './encoder/encoder.service';
 import User from './entities/auth.entity';
 import { JwtPayload } from './interfaces/jwt.interface';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -47,7 +47,7 @@ export class AuthService {
     private mailService: MailService,
 
     private readonly httpService: HttpService,
-  ) {}
+  ) { }
 
   async create(createAuthDto: CreateAuthDto): Promise<User> {
     try {
@@ -57,10 +57,10 @@ export class AuthService {
       );
 
       const role = await this.roleRepository.getDefaultRole();
-      const user = await this.userRepository.create({
+      const user = this.userRepository.create({
         ...createAuthDto,
         password: plainTextToHash,
-        activationToken: v4(),
+        activationToken: randomUUID(),
         role,
       });
       const userToSave = await this.userRepository.save(user);
@@ -158,7 +158,7 @@ export class AuthService {
     try {
       const user: User = await this.findByEmail(email);
 
-      const resetPasswordToken = v4();
+      const resetPasswordToken = randomUUID();
       await this.userRepository.update(
         user.id,
 

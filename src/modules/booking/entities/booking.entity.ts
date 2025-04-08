@@ -8,7 +8,6 @@ import {
 } from 'typeorm';
 
 import User from '@/modules/auth/entities/auth.entity';
-import { Services } from '@/modules/booking-services/entities/services.entity';
 import { Status } from '@/modules/status/entities/status.entity';
 
 @Entity('booking')
@@ -28,14 +27,6 @@ export class Booking {
   })
   clientId: User;
 
-  @ApiProperty({
-    type: () => Services,
-  })
-  @ManyToOne(() => Services, services => services.booking)
-  @JoinColumn({
-    name: 'service_id',
-  })
-  serviceId: Services;
 
   @ApiProperty({
     type: () => Status,
