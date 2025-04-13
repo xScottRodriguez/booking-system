@@ -1,7 +1,9 @@
-.node_modules
+package.json
+pnpm-lock.yaml
+*.js
+*.json
+node_modules
 dist
-**/node_modules/**
-package*
-db
-**/template/**
-**.hbs
+.husky
+*.json
+*.md

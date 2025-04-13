@@ -3,17 +3,15 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { TypeOrmModule } from '@nestjs/typeorm';
-
-import { RoleModule } from '@/modules/role/role.module';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { EncoderService } from './encoder/encoder.service';
-import User from './entities/auth.entity';
+import { UserRepository } from './repository/users.repository';
 import { GoogleStrategy } from './strategies/google-strategy';
 import { JwtStrategy } from './strategies/jwtStrategy';
-import { UserRepository } from './repository/users.repository';
+import { PrismaModule } from '../prisma/prisma.module';
+import { RoleModule } from '@/modules/role/role.module';
 
 @Module({
   imports: [
@@ -29,11 +27,17 @@ import { UserRepository } from './repository/users.repository';
       }),
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([User]),
     RoleModule,
+    PrismaModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, EncoderService, JwtStrategy, GoogleStrategy, UserRepository],
-  exports: [JwtStrategy, PassportModule],
+  providers: [
+    AuthService,
+    EncoderService,
+    JwtStrategy,
+    GoogleStrategy,
+    UserRepository,
+  ],
+  exports: [JwtStrategy, PassportModule, UserRepository],
 })
-export class AuthModule { }
+export class AuthModule {}

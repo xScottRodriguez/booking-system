@@ -33,6 +33,7 @@ $ yarn
 ```
 
 ## Environments
+
 ```env
 #DATABASE_URL
 DATABASE_URL=
@@ -87,6 +88,7 @@ CLOUD_NAME=
 CLOUD_KEY=
 CLOUD_SECRET=
 ```
+
 ## Prepare hooks
 
 ### Install husky

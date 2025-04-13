@@ -4,14 +4,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { PrismaModule } from './modules/prisma/prisma.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { BookingModule } from '@/modules/booking/booking.module';
 import { MailModule } from '@/modules/mail/mail.module';
 import { RoleModule } from '@/modules/role/role.module';
 import { StatusModule } from '@/modules/status/status.module';
-import { PrismaModule } from './modules/prisma/prisma.module';
-
-
 
 @Module({
   imports: [
@@ -31,23 +29,23 @@ import { PrismaModule } from './modules/prisma/prisma.module';
       useFactory: (configService: ConfigService) =>
         process.env.DATABASE_URL !== undefined
           ? {
-            type: 'postgres',
-            url: process.env.DATABASE_URL,
-            autoLoadEntities: true,
-            synchronize: false,
-            entities: ['./dist/**/*.entity.js'],
-          }
+              type: 'postgres',
+              url: process.env.DATABASE_URL,
+              autoLoadEntities: true,
+              synchronize: false,
+              entities: ['./dist/**/*.entity.js'],
+            }
           : {
-            type: 'postgres',
-            host: configService.get('PG_HOST'),
-            port: +configService.get<number>('PG_PORT'),
-            username: configService.get<string>('PG_USER'),
-            password: configService.get<string>('PG_PASSWORD'),
-            database: configService.get<string>('PG_DATABASE'),
-            autoLoadEntities: true,
-            synchronize: true,
-            entities: ['./dist/**/*.entity.js'],
-          },
+              type: 'postgres',
+              host: configService.get('PG_HOST'),
+              port: +configService.get<number>('PG_PORT'),
+              username: configService.get<string>('PG_USER'),
+              password: configService.get<string>('PG_PASSWORD'),
+              database: configService.get<string>('PG_DATABASE'),
+              autoLoadEntities: true,
+              synchronize: true,
+              entities: ['./dist/**/*.entity.js'],
+            },
     }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -64,8 +62,8 @@ import { PrismaModule } from './modules/prisma/prisma.module';
     MailModule,
     RoleModule,
     StatusModule,
-    PrismaModule
+    PrismaModule,
   ],
   providers: [],
 })
-export class AppModule { }
+export class AppModule {}

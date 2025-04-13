@@ -1,18 +1,17 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { InjectRepository } from '@nestjs/typeorm';
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { Repository } from 'typeorm';
 
-import User from '../entities/auth.entity';
+import { users } from '@prisma/client';
+import { ExtractJwt, Strategy } from 'passport-jwt';
+
 import { JwtPayload } from '../interfaces/jwt.interface';
+import { UserRepository } from '../repository';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
-    @InjectRepository(User)
-    private authModel: Repository<User>,
+    private authModel: UserRepository,
 
     private configService: ConfigService,
   ) {
@@ -23,14 +22,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload): Promise<User> {
+  async validate(payload: JwtPayload): Promise<users> {
     const { email } = payload;
-    const user = await this.authModel.findOne({
-      where: { email },
-      relations: {
-        role: true,
-      },
-    });
+    const user = await this.authModel.findByEmail(email);
 
     if (!user) throw new UnauthorizedException('Invalid credentials');
 

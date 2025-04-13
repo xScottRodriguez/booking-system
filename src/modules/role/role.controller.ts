@@ -9,10 +9,10 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
-import { RoleAuthGuard } from '@/guards/role-auth/role-auth.guard';
+import { roles } from '@prisma/client';
 
-import { Role } from './entities/role.entity';
 import { RoleService } from './role.service';
+import { RoleAuthGuard } from '@/guards/role-auth/role-auth.guard';
 
 @ApiBearerAuth()
 @ApiTags('Roles')
@@ -22,7 +22,6 @@ export class RoleController {
 
   @ApiOkResponse({
     description: 'List Roles',
-    type: Role,
     isArray: true,
   })
   @ApiUnauthorizedResponse({
@@ -44,13 +43,12 @@ export class RoleController {
   })
   @UseGuards(new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
   @Get()
-  async find(): Promise<Role[]> {
+  async find(): Promise<roles[]> {
     return this.roleService.getAll();
   }
 
   @ApiOkResponse({
     description: 'list a Role',
-    type: Role,
   })
   @ApiUnauthorizedResponse({
     schema: {
@@ -80,7 +78,7 @@ export class RoleController {
   })
   @UseGuards(new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<Role> {
+  async findOne(@Param('id') id: string): Promise<roles> {
     return this.roleService.getOne(+id);
   }
 }

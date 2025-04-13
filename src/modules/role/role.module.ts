@@ -1,15 +1,14 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { Role } from './entities/role.entity';
-import { RoleRepositoryService } from './role-repository.service';
+import { RoleRepository } from './repository';
 import { RoleController } from './role.controller';
 import { RoleService } from './role.service';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Role])],
+  imports: [PrismaModule],
   controllers: [RoleController],
-  providers: [RoleService, RoleRepositoryService],
-  exports: [RoleRepositoryService],
+  providers: [RoleService, RoleRepository],
+  exports: [RoleRepository],
 })
 export class RoleModule {}

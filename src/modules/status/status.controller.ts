@@ -21,12 +21,10 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
-import { RoleAuthGuard } from '@/guards/role-auth/role-auth.guard';
-
 import { CreateStatusDto } from './dto/create-status.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
-import { Status } from './entities/status.entity';
 import { StatusService } from './status.service';
+import { RoleAuthGuard } from '@/guards/role-auth/role-auth.guard';
 
 @ApiTags('States')
 @ApiBearerAuth()
@@ -36,7 +34,6 @@ export class StatusController {
 
   @ApiCreatedResponse({
     description: 'state Created',
-    type: Status,
   })
   @ApiConflictResponse({
     schema: {
@@ -76,13 +73,12 @@ export class StatusController {
   })
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN'))
   @Post()
-  create(@Body() createStatusDto: CreateStatusDto) {
+  create(@Body() createStatusDto: CreateStatusDto): Promise<void> {
     return this.statusService.create(createStatusDto);
   }
 
   @ApiOkResponse({
     description: 'state Created',
-    type: Status,
     isArray: true,
   })
   @ApiUnauthorizedResponse({
@@ -104,13 +100,12 @@ export class StatusController {
   })
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
   @Get()
-  findAll() {
+  findAll(): Promise<void> {
     return this.statusService.findAll();
   }
 
   @ApiOkResponse({
     description: 'state Created',
-    type: Status,
   })
   @ApiUnauthorizedResponse({
     schema: {
@@ -149,7 +144,7 @@ export class StatusController {
   })
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: string): Promise<void> {
     return this.statusService.findOne(+id);
   }
 
@@ -193,7 +188,10 @@ export class StatusController {
   })
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN'))
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateStatusDto: UpdateStatusDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateStatusDto: UpdateStatusDto,
+  ): Promise<void> {
     return this.statusService.update(+id, updateStatusDto);
   }
 
@@ -237,7 +235,7 @@ export class StatusController {
   })
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN'))
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: string): Promise<void> {
     return this.statusService.remove(+id);
   }
 }

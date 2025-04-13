@@ -24,19 +24,21 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { validate } from 'class-validator';
 
-import { RoleAuthGuard } from '@/guards/role-auth/role-auth.guard';
+import { users } from '@prisma/client';
+import { validate } from 'class-validator';
+import { Request } from 'express';
 
 import { AuthService } from './auth.service';
 import { GetUser } from './decorators/get-user.decorator';
+import { CreateGoogleDto } from './dto';
 import { ActivateUserDto } from './dto/activate-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { RequestResetPasswordDto } from './dto/request-reset-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import User from './entities/auth.entity';
+import { RoleAuthGuard } from '@/guards/role-auth/role-auth.guard';
 
 @ApiBearerAuth()
 @ApiTags('Auth')
@@ -82,7 +84,9 @@ export class AuthController {
     },
   })
   @Post('/local/register')
-  create(@Body() createAuthDto: CreateAuthDto): Promise<User> {
+  create(
+    @Body() createAuthDto: CreateAuthDto,
+  ): Promise<Omit<users, 'password'>> {
     return this.authService.create(createAuthDto);
   }
 
@@ -133,7 +137,12 @@ export class AuthController {
     description: 'NotFoundException',
   })
   @Post('/local/login')
-  login(@Body() loginAuthDto: LoginAuthDto) {
+  login(@Body() loginAuthDto: LoginAuthDto): Promise<{
+    user: users;
+    jwt: {
+      accessToken: string;
+    };
+  }> {
     return this.authService.login(loginAuthDto);
   }
 
@@ -176,7 +185,18 @@ export class AuthController {
   })
   @Get('/google/callback')
   @UseGuards(AuthGuard('google'))
-  async googleSignIn(@Req() req) {
+  async googleSignIn(@Req() req: Request): Promise<
+    | {
+        user: CreateGoogleDto;
+        jwt: string;
+      }
+    | {
+        user: users;
+        jwt: {
+          accessToken: string;
+        };
+      }
+  > {
     return await this.authService.prepareUserRegister(req);
   }
   @ApiOkResponse({
@@ -197,7 +217,18 @@ export class AuthController {
     description: 'Login with google',
   })
   @Get('/google-accesses')
-  async googleAccess(@Query() params: { access_token: string }) {
+  googleAccess(@Query() params: { access_token: string }): Promise<
+    | {
+        user: CreateGoogleDto;
+        jwt: string;
+      }
+    | {
+        user: users;
+        jwt: {
+          accessToken: string;
+        };
+      }
+  > {
     const { access_token } = params;
     return this.authService.prepareLoginGoogle(access_token);
   }
@@ -231,7 +262,10 @@ export class AuthController {
 
   @Get('reset-password/:token')
   @Render('index')
-  resetPasswordView(@Param('token') token: string) {
+  resetPasswordView(@Param('token') token: string): {
+    message: string;
+    token: string;
+  } {
     return { message: 'Hello world!', token: token };
   }
 
@@ -272,7 +306,15 @@ export class AuthController {
     @Param('token') token: string,
     @Body('password')
     password: string,
-  ) {
+  ): Promise<
+    | {
+        response: string;
+      }
+    | {
+        errorMessages: string[][];
+        token: string;
+      }
+  > {
     const dto = new ResetPasswordDto();
     dto.password = password;
     dto.resetPasswordToken = token;
@@ -324,7 +366,7 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
   changePassword(
     @Body() changePasswordDto: ChangePasswordDto,
-    @GetUser() user: User,
+    @GetUser() user: users,
   ): Promise<void> {
     return this.authService.changePassword(changePasswordDto, user);
   }
@@ -334,13 +376,12 @@ export class AuthController {
     description: 'The account has been successfully activated',
   })
   @Get('/activate-accounts')
-  async activateAccount(@Query() activateUserDto: ActivateUserDto) {
+  async activateAccount(
+    @Query() activateUserDto: ActivateUserDto,
+  ): Promise<void> {
     return await this.authService.activateUser(activateUserDto);
   }
 
-  @ApiOkResponse({
-    type: User,
-  })
   @ApiUnauthorizedResponse({
     schema: {
       example: {
@@ -354,7 +395,7 @@ export class AuthController {
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
   @Get('/me')
-  async getProfile(@GetUser() user: User) {
+  async getProfile(@GetUser() user: users): Promise<users> {
     return await this.authService.getProfile(user);
   }
 
@@ -362,13 +403,13 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
   async subscriptionNotifications(
     @Body() data: { token: string },
-    @GetUser() user: User,
-  ) {
+    @GetUser() user: users,
+  ): Promise<void> {
     return await this.authService.subscriptionToNotifications(data.token, user);
   }
   @Get('/subscriptions/:id')
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
-  async getSubscriptions(@Param('id') id: string) {
+  async getSubscriptions(@Param('id') id: string): Promise<boolean> {
     return await this.authService.checkSubscriptions(+id);
   }
 }

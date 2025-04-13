@@ -4,36 +4,33 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 
-import { Role } from './entities/role.entity';
+import { roles } from '@prisma/client';
+
+import { RoleRepository } from './repository';
 
 @Injectable()
 export class RoleService {
   #logger = new Logger(RoleService.name);
-  constructor(
-    @InjectRepository(Role)
-    private readonly roleRepository: Repository<Role>,
-  ) {}
-  async getAll(): Promise<Role[]> {
+  constructor(private readonly repository: RoleRepository) {}
+  async getAll(): Promise<roles[]> {
     try {
-      return await this.roleRepository.find();
+      return await this.repository.getAll();
     } catch (error) {
       this.#logger.error(error.message);
       throw new InternalServerErrorException('Error trying find roles');
     }
   }
 
-  async getOne(id: number): Promise<Role> {
-    const role = await this.roleRepository
-
-      .createQueryBuilder('roles')
-      .where('roles.id = :id', { id })
-      .getOne();
+  async getOne(id: number): Promise<roles> {
+    const role = await this.repository.getOne(id);
 
     if (!role) throw new NotFoundException('Role Not Found');
 
     return role;
+  }
+
+  getDefaultRole(defaultRole = 'AUTHENTICATED'): Promise<roles> {
+    return this.repository.getDefaultRole(defaultRole);
   }
 }

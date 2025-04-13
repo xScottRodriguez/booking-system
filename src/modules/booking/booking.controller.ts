@@ -21,15 +21,14 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { RoleAuthGuard } from '@/guards/role-auth/role-auth.guard';
-import { GetUser } from '@/modules/auth/decorators/get-user.decorator';
-import User from '@/modules/auth/entities/auth.entity';
+import { users } from '@prisma/client';
 
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { UpdateStateBookingDto } from './dto/update-state-booking.dto';
-import { Booking } from './entities/booking.entity';
+import { RoleAuthGuard } from '@/guards/role-auth/role-auth.guard';
+import { GetUser } from '@/modules/auth/decorators/get-user.decorator';
 
 @ApiTags('Bookings')
 @ApiBearerAuth()
@@ -41,7 +40,6 @@ export class BookingController {
 
   @ApiCreatedResponse({
     description: 'Booking Created',
-    type: Booking,
   })
   @ApiConflictResponse({
     schema: {
@@ -64,14 +62,13 @@ export class BookingController {
   })
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
   @Post()
-  create(@Body() createBookingDto: CreateBookingDto) {
+  create(@Body() createBookingDto: CreateBookingDto): Promise<users> {
     return this.bookingService.create(createBookingDto);
   }
 
   @ApiOkResponse({
     description: 'List bookings',
     isArray: true,
-    type: Booking,
   })
   @ApiInternalServerErrorResponse({
     schema: {
@@ -84,7 +81,7 @@ export class BookingController {
   })
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
   @Get()
-  findAll(@GetUser() user: User) {
+  findAll(@GetUser() user: users): Promise<users[] | void> {
     return this.bookingService.findAll(user);
   }
 
@@ -102,7 +99,10 @@ export class BookingController {
   })
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateBookingDto: UpdateBookingDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateBookingDto: UpdateBookingDto,
+  ): Promise<void> {
     return this.bookingService.update(+id, updateBookingDto);
   }
 
@@ -110,7 +110,7 @@ export class BookingController {
   updateStateBooking(
     @Param('id') id: string,
     @Body() updateStateBookingDto: UpdateStateBookingDto,
-  ) {
+  ): Promise<void> {
     return this.bookingService.updateStateBooking(
       +id,
       updateStateBookingDto.stateId,
@@ -131,7 +131,7 @@ export class BookingController {
   })
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: string): Promise<void> {
     return this.bookingService.remove(+id);
   }
 }

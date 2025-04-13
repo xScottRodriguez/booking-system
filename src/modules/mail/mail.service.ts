@@ -1,19 +1,16 @@
+import { Injectable, Logger } from '@nestjs/common';
+
 import { MailerService } from '@nestjs-modules/mailer';
-import {
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
+import { users } from '@prisma/client';
 
 import { ConfigurationService } from '@/config/configuration';
-import User from '@/modules/auth/entities/auth.entity';
 
 @Injectable()
 export class MailService {
   #logger = new Logger(MailService.name);
   constructor(private mailerService: MailerService) {}
 
-  async sendVerificationUsers(user: User, token: string) {
+  async sendVerificationUsers(user: users, token: string): Promise<boolean> {
     const configService = new ConfigurationService();
     const url = `${configService.getapiBaseUrl()}/auth/activate-accounts/?id=${
       user.id
@@ -32,14 +29,14 @@ export class MailService {
     try {
       this.#logger.debug('MAIL SEND');
       await this.mailerService.sendMail(sendMailOptions);
+      return true;
     } catch (error) {
       this.#logger.error(error.message);
-      throw new InternalServerErrorException(
-        'error trying sent mail verification',
-      );
+
+      return false;
     }
   }
-  async sendResetPassword(user: User, token: string) {
+  async sendResetPassword(user: users, token: string): Promise<boolean> {
     const configService = new ConfigurationService();
     const url = `${configService.getapiBaseUrl()}/auth/reset-password/${token}`;
     const sendMailOptions = {
@@ -56,11 +53,11 @@ export class MailService {
     try {
       this.#logger.debug('MAIL SEND');
       await this.mailerService.sendMail(sendMailOptions);
+      return true;
     } catch (error) {
       this.#logger.error(error);
-      throw new InternalServerErrorException(
-        'error trying sent mail verification',
-      );
+
+      return false;
     }
   }
 }
