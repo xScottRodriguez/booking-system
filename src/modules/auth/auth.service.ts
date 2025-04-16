@@ -14,6 +14,7 @@ import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'crypto';
 
 import { roles, users } from '@prisma/client';
+import { IGoogleAccount } from '@root/src/common/interfaces';
 import { AxiosError } from 'axios';
 import { Request } from 'express';
 import { catchError, firstValueFrom } from 'rxjs';
@@ -29,7 +30,6 @@ import { EncoderService } from './encoder/encoder.service';
 import { JwtPayload } from './interfaces/jwt.interface';
 import { UserRepository } from './repository';
 import { RoleRepository } from '../role/repository';
-import { IGoogleAccount } from '@/interfaces/gogle.interface';
 import { MailService } from '@/modules/mail/mail.service';
 
 @Injectable()
@@ -56,7 +56,6 @@ export class AuthService {
 
       const role = await this.roleRepository.getDefaultRole();
 
-      console.log({ role });
       const user: users = await this.userRepository.create(
         {
           ...createAuthDto,
@@ -64,14 +63,18 @@ export class AuthService {
         },
         role.id,
       );
-      await this.mailService.sendVerificationUsers(user, user.activationToken);
+      await this.mailService.sendVerificationEmail(
+        user.email,
+        user.activationToken,
+        user.username,
+      );
 
       const { password: _password, ...userWithoutPassword } = user;
       return userWithoutPassword;
     } catch (error) {
       this.#logger.error({ error });
 
-      if (error.code === '23505')
+      if (error.code === 'P2002')
         throw new ConflictException('This email is already registered');
 
       throw new InternalServerErrorException('Error creating user');
@@ -79,7 +82,7 @@ export class AuthService {
   }
 
   async login(loginAuthDto: LoginAuthDto): Promise<{
-    user: users;
+    user: Omit<users, 'password'>;
     jwt: {
       accessToken: string;
     };
@@ -171,7 +174,10 @@ export class AuthService {
         ...user,
         resetPasswordToken,
       });
-      await this.mailService.sendResetPassword(user, resetPasswordToken);
+      await this.mailService.sendPasswordResetEmail(
+        user.email,
+        resetPasswordToken,
+      );
     } catch (error) {
       this.#logger.error(error.message);
       throw new InternalServerErrorException('Error trying to reset password');
@@ -240,7 +246,7 @@ export class AuthService {
         jwt: string;
       }
     | {
-        user: users;
+        user: Omit<users, 'password'>;
         jwt: {
           accessToken: string;
         };
@@ -259,7 +265,7 @@ export class AuthService {
   }
 
   async loginWithGoogle(loginAuthDto: users): Promise<{
-    user: users;
+    user: Omit<users, 'password'>;
     jwt: {
       accessToken: string;
     };
@@ -290,7 +296,7 @@ export class AuthService {
 
   async prepareLoginGoogle(accessToken: string): Promise<
     | {
-        user: users;
+        user: Omit<users, 'password'>;
         jwt: {
           accessToken: string;
         };
@@ -361,7 +367,7 @@ export class AuthService {
     }
   }
 
-  async getProfile(user: users): Promise<users> {
+  async getProfile(user: users): Promise<Omit<users, 'password'>> {
     const { password: _password, ...userWithoutPassword } = user;
     return userWithoutPassword;
   }

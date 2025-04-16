@@ -22,12 +22,13 @@ import {
 } from '@nestjs/swagger';
 
 import { users } from '@prisma/client';
+import { Roles } from '@root/src/common/enums';
+import { RoleAuthGuard } from '@root/src/common/guards';
 
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { UpdateStateBookingDto } from './dto/update-state-booking.dto';
-import { RoleAuthGuard } from '@/guards/role-auth/role-auth.guard';
 import { GetUser } from '@/modules/auth/decorators/get-user.decorator';
 
 @ApiTags('Bookings')
@@ -60,9 +61,12 @@ export class BookingController {
       },
     },
   })
-  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
+  @UseGuards(
+    AuthGuard('jwt'),
+    new RoleAuthGuard(Roles.ADMIN, Roles.AUTHENTICATED),
+  )
   @Post()
-  create(@Body() createBookingDto: CreateBookingDto): Promise<users> {
+  create(@Body() createBookingDto: CreateBookingDto): Promise<void> {
     return this.bookingService.create(createBookingDto);
   }
 

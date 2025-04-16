@@ -1,0 +1,6 @@
+{
+  "mail": {
+    "subject": "¡Bienvenido a {{appName}}!",
+    "resetPassword": "Restablecer la contraseña"
+  }
+}

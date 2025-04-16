@@ -73,7 +73,7 @@ export class UserRepository {
     });
   }
 
-  updateUser(id: number, data: Partial<users>): Promise<user> {
+  updateUser(id: number, data: Partial<users>): Promise<users> {
     return this.prisma.users.update({
       where: {
         id,

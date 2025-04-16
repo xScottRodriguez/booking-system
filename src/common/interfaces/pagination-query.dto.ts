@@ -1,4 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+
 import {
   IsNumber,
   IsOptional,
@@ -7,7 +8,8 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import { OrderType } from 'src/enums/sort-enum';
+
+import { OrderType } from '../enums';
 
 export class PaginationQueryDto {
   @ApiPropertyOptional({

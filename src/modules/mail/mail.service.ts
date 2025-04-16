@@ -1,63 +1,72 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { MailerService } from '@nestjs-modules/mailer';
-import { users } from '@prisma/client';
+import { envs } from '@root/src/common/config';
+import { compileTemplate, getMessage } from '@root/src/common/utils';
+import { CreateEmailOptions, Resend } from 'resend';
 
-import { ConfigurationService } from '@/config/configuration';
+import { MailerServiceInterface } from './interfaces';
 
 @Injectable()
-export class MailService {
+export class MailService implements MailerServiceInterface {
+  private resend: Resend;
   #logger = new Logger(MailService.name);
-  constructor(private mailerService: MailerService) {}
-
-  async sendVerificationUsers(user: users, token: string): Promise<boolean> {
-    const configService = new ConfigurationService();
-    const url = `${configService.getapiBaseUrl()}/auth/activate-accounts/?id=${
-      user.id
-    }&code=${token}`;
-    const sendMailOptions = {
-      from: configService.getSender(),
-      to: user.email,
-      subject: 'Welcome to Mi application; Confirm Your Account!',
-      template: './transactional',
-      context: {
-        name: user.username,
-        url,
-      },
-    };
-
-    try {
-      this.#logger.debug('MAIL SEND');
-      await this.mailerService.sendMail(sendMailOptions);
-      return true;
-    } catch (error) {
-      this.#logger.error(error.message);
-
-      return false;
-    }
+  constructor() {
+    this.resend = new Resend(envs.resendApiKey);
   }
-  async sendResetPassword(user: users, token: string): Promise<boolean> {
-    const configService = new ConfigurationService();
-    const url = `${configService.getapiBaseUrl()}/auth/reset-password/${token}`;
-    const sendMailOptions = {
-      from: configService.getSender(),
-      to: user.email,
-      subject: 'Your Candy Cake password',
-      template: './reset-password',
-      context: {
-        name: user.username,
-        url,
-      },
+
+  async sendVerificationEmail(
+    to: string,
+    token: string,
+    username: string,
+  ): Promise<void> {
+    const url = `${envs.apiBaseUrl}/auth/activate-accounts/?code=${token}`;
+    const [html, subject] = await Promise.all<
+      [Promise<string>, Promise<string>]
+    >([
+      compileTemplate('transactional', { url: url, username: username }),
+      getMessage('mail.subject'),
+    ]);
+    const payload: CreateEmailOptions = {
+      from: envs.senderMail,
+      to,
+      subject: subject,
+      html: html,
     };
 
-    try {
-      this.#logger.debug('MAIL SEND');
-      await this.mailerService.sendMail(sendMailOptions);
-      return true;
-    } catch (error) {
-      this.#logger.error(error);
+    this.resend.emails
+      .send(payload)
+      .then(dat => {
+        this.#logger.log(
+          `Verification email sent successfully: ${JSON.stringify(dat, null, 2)}`,
+        );
+      })
+      .catch(error => {
+        this.#logger.error(`Error sending verification email: ${error}`);
+      })
+      .finally(() => {
+        this.#logger.log('Verification email sent successfully');
+      });
+  }
+  async sendPasswordResetEmail(to: string, token: string): Promise<void> {
+    const url = `${envs.apiBaseUrl}/auth/reset-password/${token}`;
+    const [html, subject] = await Promise.all<
+      [Promise<string>, Promise<string>]
+    >([compileTemplate('reset-password', { url }), getMessage('mail.subject')]);
 
-      return false;
-    }
+    const sendMailOptions: CreateEmailOptions = {
+      from: envs.senderMail,
+      to,
+      subject: subject,
+      html: html,
+    };
+
+    this.resend.emails
+      .send(sendMailOptions)
+      .catch(error => {
+        this.#logger.error(`Error sending password reset email: ${error}`);
+      })
+      .finally(() => {
+        this.#logger.log('Password reset email sent successfully');
+      });
   }
 }

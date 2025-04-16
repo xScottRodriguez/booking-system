@@ -18,6 +18,11 @@
         "include": "**/templates/*",
         "watchAssets": true,
         "outDir": "dist/src/"
+      },
+      {
+        "include": "**/lang/*",
+        "watchAssets": true,
+        "outDir": "dist/src/"
       }
     ],
     "deleteOutDir": true

@@ -21,10 +21,12 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
+import { Roles } from '@root/src/common/enums';
+import { RoleAuthGuard } from '@root/src/common/guards';
+
 import { CreateStatusDto } from './dto/create-status.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { StatusService } from './status.service';
-import { RoleAuthGuard } from '@/guards/role-auth/role-auth.guard';
 
 @ApiTags('States')
 @ApiBearerAuth()
@@ -71,7 +73,7 @@ export class StatusController {
       },
     },
   })
-  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN'))
+  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard(Roles.ADMIN))
   @Post()
   create(@Body() createStatusDto: CreateStatusDto): Promise<void> {
     return this.statusService.create(createStatusDto);
@@ -98,7 +100,10 @@ export class StatusController {
       },
     },
   })
-  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
+  @UseGuards(
+    AuthGuard('jwt'),
+    new RoleAuthGuard(Roles.ADMIN, Roles.AUTHENTICATED),
+  )
   @Get()
   findAll(): Promise<void> {
     return this.statusService.findAll();
@@ -142,7 +147,10 @@ export class StatusController {
       },
     },
   })
-  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
+  @UseGuards(
+    AuthGuard('jwt'),
+    new RoleAuthGuard(Roles.ADMIN, Roles.AUTHENTICATED),
+  )
   @Get(':id')
   findOne(@Param('id') id: string): Promise<void> {
     return this.statusService.findOne(+id);
@@ -186,7 +194,7 @@ export class StatusController {
       },
     },
   })
-  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN'))
+  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard(Roles.ADMIN))
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -233,7 +241,7 @@ export class StatusController {
       },
     },
   })
-  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN'))
+  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard(Roles.ADMIN))
   @Delete(':id')
   remove(@Param('id') id: string): Promise<void> {
     return this.statusService.remove(+id);

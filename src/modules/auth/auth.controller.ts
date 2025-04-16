@@ -26,6 +26,8 @@ import {
 } from '@nestjs/swagger';
 
 import { users } from '@prisma/client';
+import { Roles } from '@root/src/common/enums';
+import { RoleAuthGuard } from '@root/src/common/guards';
 import { validate } from 'class-validator';
 import { Request } from 'express';
 
@@ -38,7 +40,6 @@ import { CreateAuthDto } from './dto/create-auth.dto';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { RequestResetPasswordDto } from './dto/request-reset-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { RoleAuthGuard } from '@/guards/role-auth/role-auth.guard';
 
 @ApiBearerAuth()
 @ApiTags('Auth')
@@ -138,7 +139,7 @@ export class AuthController {
   })
   @Post('/local/login')
   login(@Body() loginAuthDto: LoginAuthDto): Promise<{
-    user: users;
+    user: Omit<users, 'password'>;
     jwt: {
       accessToken: string;
     };
@@ -191,7 +192,7 @@ export class AuthController {
         jwt: string;
       }
     | {
-        user: users;
+        user: Omit<users, 'password'>;
         jwt: {
           accessToken: string;
         };
@@ -219,14 +220,14 @@ export class AuthController {
   @Get('/google-accesses')
   googleAccess(@Query() params: { access_token: string }): Promise<
     | {
-        user: CreateGoogleDto;
-        jwt: string;
-      }
-    | {
-        user: users;
+        user: Omit<users, 'password'>;
         jwt: {
           accessToken: string;
         };
+      }
+    | {
+        user: CreateGoogleDto;
+        jwt: string;
       }
   > {
     const { access_token } = params;
@@ -363,7 +364,10 @@ export class AuthController {
   })
   @ApiBearerAuth('access-token')
   @Patch('/change-passwords')
-  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
+  @UseGuards(
+    AuthGuard('jwt'),
+    new RoleAuthGuard(Roles.AUTHENTICATED, Roles.ADMIN),
+  )
   changePassword(
     @Body() changePasswordDto: ChangePasswordDto,
     @GetUser() user: users,
@@ -393,14 +397,20 @@ export class AuthController {
     description: 'Unauthorized error',
   })
   @ApiBearerAuth('access-token')
-  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
+  @UseGuards(
+    AuthGuard('jwt'),
+    new RoleAuthGuard(Roles.ADMIN, Roles.AUTHENTICATED),
+  )
   @Get('/me')
-  async getProfile(@GetUser() user: users): Promise<users> {
+  async getProfile(@GetUser() user: users): Promise<Omit<users, 'password'>> {
     return await this.authService.getProfile(user);
   }
 
   @Post('/subscriptions')
-  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
+  @UseGuards(
+    AuthGuard('jwt'),
+    new RoleAuthGuard(Roles.ADMIN, Roles.AUTHENTICATED),
+  )
   async subscriptionNotifications(
     @Body() data: { token: string },
     @GetUser() user: users,
@@ -408,7 +418,10 @@ export class AuthController {
     return await this.authService.subscriptionToNotifications(data.token, user);
   }
   @Get('/subscriptions/:id')
-  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
+  @UseGuards(
+    AuthGuard('jwt'),
+    new RoleAuthGuard(Roles.ADMIN, Roles.AUTHENTICATED),
+  )
   async getSubscriptions(@Param('id') id: string): Promise<boolean> {
     return await this.authService.checkSubscriptions(+id);
   }

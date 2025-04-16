@@ -2,17 +2,16 @@ import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import * as compression from 'compression';
-import * as admin from 'firebase-admin';
-import helmet from 'helmet';
+
 import { join } from 'path';
 
+import * as admin from 'firebase-admin';
+import helmet from 'helmet';
+
+import { envs } from './common/config';
 import { AppModule } from '@/app.module';
-import { ConfigurationService } from '@/config/configuration';
 
-//import * as serviceAccount from '@root/candyApiKey.json';
-
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // middlewares
@@ -30,7 +29,6 @@ async function bootstrap() {
       },
     }),
   );
-  app.use(compression());
   app.use(helmet());
 
   // statics
@@ -73,10 +71,6 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
 
-  const configurationService = new ConfigurationService();
-
-  const port = configurationService.getPort();
-
   SwaggerModule.setup(`${APP_ROUTE_PREFIX}/:version/docs`, app, document);
 
   if (!admin.apps.length) {
@@ -88,7 +82,7 @@ async function bootstrap() {
     // });
   }
 
-  await app.listen(port, async () => {
+  await app.listen(envs.port, async () => {
     const url = await app.getUrl();
     console.log(`listen on  ${url}`);
   });
