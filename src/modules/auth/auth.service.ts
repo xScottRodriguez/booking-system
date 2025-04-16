@@ -15,6 +15,7 @@ import { randomUUID } from 'crypto';
 
 import { roles, users } from '@prisma/client';
 import { IGoogleAccount } from '@root/src/common/interfaces';
+import { UserSerialized } from '@root/src/common/types';
 import { AxiosError } from 'axios';
 import { Request } from 'express';
 import { catchError, firstValueFrom } from 'rxjs';
@@ -48,7 +49,7 @@ export class AuthService {
     private readonly httpService: HttpService,
   ) {}
 
-  async create(createAuthDto: CreateAuthDto): Promise<Omit<users, 'password'>> {
+  async create(createAuthDto: CreateAuthDto): Promise<UserSerialized> {
     try {
       const { password } = createAuthDto;
       const plainTextToHash =
@@ -63,13 +64,19 @@ export class AuthService {
         },
         role.id,
       );
-      await this.mailService.sendVerificationEmail(
-        user.email,
-        user.activationToken,
-        user.username,
-      );
+      await this.mailService.sendVerificationEmail({
+        to: user.email,
+        token: user.activationToken,
+        userId: user.id,
+        username: user.username,
+      });
 
-      const { password: _password, ...userWithoutPassword } = user;
+      const {
+        password: _password,
+        resetPasswordToken: _resetPasswordToken,
+        activationToken: _activationToken,
+        ...userWithoutPassword
+      } = user;
       return userWithoutPassword;
     } catch (error) {
       this.#logger.error({ error });
@@ -82,7 +89,7 @@ export class AuthService {
   }
 
   async login(loginAuthDto: LoginAuthDto): Promise<{
-    user: Omit<users, 'password'>;
+    user: UserSerialized;
     jwt: {
       accessToken: string;
     };
@@ -115,7 +122,13 @@ export class AuthService {
     try {
       const accessToken = this.jwtService.sign(payload);
 
-      const { password: _password, ...userWithoutPassword } = user;
+      const {
+        password: _password,
+        activationToken: _activationToken,
+        resetPasswordToken: _resetPasswordToken,
+        ...userWithoutPassword
+      } = user;
+
       return {
         user: userWithoutPassword,
         jwt: { accessToken },
@@ -367,8 +380,13 @@ export class AuthService {
     }
   }
 
-  async getProfile(user: users): Promise<Omit<users, 'password'>> {
-    const { password: _password, ...userWithoutPassword } = user;
+  async getProfile(user: users): Promise<UserSerialized> {
+    const {
+      password: _password,
+      activationToken: _activationToken,
+      resetPasswordToken: _resetPasswordToken,
+      ...userWithoutPassword
+    } = user;
     return userWithoutPassword;
   }
 

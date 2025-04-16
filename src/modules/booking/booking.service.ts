@@ -1,21 +1,37 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 
-import { users } from '@prisma/client';
+import { GlobalScheduleConfig, users } from '@prisma/client';
+import { Providers } from '@root/src/common/enums';
+import { CapacityService } from '@root/src/common/services/capacity.service';
 
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
-import { UserRepository } from '../auth/repository';
-import { RoleService } from '@/modules/role/role.service';
+import {
+  GlobalScheduleConfigRepository,
+  ReservationRepository,
+} from './repository';
+import { ReservationsWithServices } from './types';
 
 @Injectable()
 export class BookingService {
-  #logger = new Logger(BookingService.name);
   constructor(
-    private readonly _userRepository: UserRepository,
-
-    private readonly _roleService: RoleService,
+    @Inject(Providers.CAPACITY_STRATEGY)
+    private readonly _capacityService: CapacityService,
+    private readonly _globalScheduleConfigRepository: GlobalScheduleConfigRepository,
+    private readonly _reservationRepository: ReservationRepository,
   ) {}
   async create(_createBookingDto: CreateBookingDto): Promise<void> {
+    const { serviceTypeId: _type, date, clientId: _cid } = _createBookingDto;
+
+    //checkReservationValid
+    const isValid = await this.checkReservationValid(date);
+
+    if (!isValid) throw new UnprocessableEntityException();
+
     // const { client, status } = await this.findServiceClientStatus(
     //   createBookingDto.serviceId,
     //   createBookingDto.clientId,
@@ -45,35 +61,34 @@ export class BookingService {
   }
 
   async checkReservationValid(
-    _date: Date,
+    _date: string,
     _excludeBookingId?: number,
-  ): Promise<void> {
-    // const MINIMUM_TIME_DIFFERENCE = 30;
-    // const ONE_MINUTE = 60000;
-    // try {
-    //   const bookings = await this.bookingRepository
-    //     .createQueryBuilder('booking')
-    //     .where(`DATE(booking.date) = :date`, { date })
-    //     .getMany();
-    //
-    //   date = new Date(date);
-    //
-    //   return bookings.some(booking => {
-    //     if (booking.id === excludeBookingId) return false; // Skip excluded booking
-    //
-    //     const dbReservationTime = new Date(booking.date);
-    //     const diffInMinutes = Math.abs(
-    //       Math.round(
-    //         (dbReservationTime.getTime() - date.getTime()) / ONE_MINUTE,
-    //       ),
-    //     );
-    //
-    //     return diffInMinutes < MINIMUM_TIME_DIFFERENCE;
-    //   });
-    // } catch (error) {
-    //   this.#logger.error(error.message);
-    //   throw new InternalServerErrorException('Error trying create booking');
-    // }
+  ): Promise<boolean> {
+    //get unit dailyCapacity;
+    const globalScheduleConfig: GlobalScheduleConfig =
+      await this._globalScheduleConfigRepository.getGlobalScheduleConfig();
+
+    if (!globalScheduleConfig)
+      throw new Error('Global schedule config not found');
+
+    const { defaultTotalUnits } = globalScheduleConfig;
+    //get reservations of the day joining the service type
+    const data: ReservationsWithServices[] =
+      await this._reservationRepository.findOfTheDay(_date);
+
+    //check
+    const totalUnitsusedInTheCurrentDay: number = data.reduce(
+      (acc, reservation) => {
+        return acc + reservation.serviceType.unitsRequired;
+      },
+      0,
+    );
+
+    //check if the total units used is less than the daily capacity
+    const totalUnitsAvailable: number =
+      defaultTotalUnits - totalUnitsusedInTheCurrentDay;
+
+    return totalUnitsAvailable > 0;
   }
   async findServiceClientStatus(
     _clientId: number,
@@ -132,7 +147,10 @@ export class BookingService {
     // }
   }
 
-  async update(_id: number, _updateBookingDto: UpdateBookingDto) {
+  async update(
+    _id: number,
+    _updateBookingDto: UpdateBookingDto,
+  ): Promise<void> {
     // const existsBooking = await this.bookingRepository.findOneBy({ id });
     //
     // if (!existsBooking) throw new BadRequestException('Booking not found');
@@ -170,7 +188,7 @@ export class BookingService {
     // }
   }
 
-  async updateStateBooking(_id: number, _stateId: number) {
+  async updateStateBooking(_id: number, _stateId: number): Promise<void> {
     // try {
     //   await this.bookingRepository
     //     .createQueryBuilder()
@@ -187,7 +205,7 @@ export class BookingService {
     // }
   }
 
-  async remove(_id: number) {
+  async remove(_id: number): Promise<void> {
     // try {
     //   await this.bookingRepository
     //     .createQueryBuilder('Booking')

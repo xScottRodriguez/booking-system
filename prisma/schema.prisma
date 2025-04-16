@@ -43,3 +43,67 @@ model users {
   booking            booking[]
   roles              roles?    @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_users_roles")
 }
+
+model ServiceType {
+  id            Int      @id @default(autoincrement())
+  name          String
+  unitsRequired Int      @map("units_required")
+  description   String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  reservations Reservation[]
+
+  @@map("service_type")
+}
+
+model Reservation {
+  id              Int               @id @default(autoincrement())
+  clientName      String?           @map("client_name")
+  clientPhone     String?           @map("client_phone")
+  serviceTypeId   Int               @map("service_type_id")
+  reservationDate DateTime          @map("reservation_date") // solo la fecha (puedes cortar la hora en la lógica)
+  scheduledTime   DateTime?         @map("scheduled_time") // opcional: si quieres hora específica
+  status          ReservationStatus
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  serviceType ServiceType @relation(fields: [serviceTypeId], references: [id])
+
+  @@map("reservation")
+}
+
+enum ReservationStatus {
+  pendiente
+  confirmada
+  cancelada
+  expirada
+}
+
+model GlobalScheduleConfig {
+  id                Int      @id @default(autoincrement())
+  defaultTotalUnits Int      @map("default_total_units")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("global_schedule_config")
+}
+
+model DailyScheduleConfiguration {
+  id           Int      @id @default(autoincrement())
+  scheduleDate DateTime @unique @map("scheduled_date") // solo fecha, ignora la hora 
+  totalUnits   Int      @map("total_units")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("daily_schedule_configuration")
+}
+
+model UnitSetting {
+  id                  Int      @id @default(autoincrement())
+  unitDurationMinutes Int      @default(20) @map("unit_duration_minutes") //INFO: 1 unidad = 20 minutos por defecto
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  @@map("unit_setting")
+}

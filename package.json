@@ -20,7 +20,12 @@
     "test:cov": "cross-env NODE_ENV=test jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "cross-env NODE_ENV=test jest --config ./test/jest-e2e.json",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "migration:create": "prisma migrate dev  --name $npm_config_name --create-only",
+    "migration:up": "prisma migrate deploy",
+    "migration:down": "prisma migrate reset",
+    "prisma:generate": "prisma generate",
+    "migration:seed": "prisma db seed"
   },
   "dependencies": {
     "@babel/code-frame": "7.26.2",
@@ -55,7 +60,9 @@
     "hbs": "^4.2.0",
     "helmet": "8.1.0",
     "joi": "^17.13.3",
+    "luxon": "^3.6.1",
     "multer": "1.4.5-lts.2",
+    "nest-winston": "^1.10.2",
     "nodemailer": "6.10.0",
     "passport": "0.7.0",
     "passport-google-oauth20": "^2.0.0",
@@ -67,7 +74,9 @@
     "rimraf": "6.0.1",
     "rxjs": "7.8.2",
     "typeorm": "0.3.22",
-    "typeorm-ts-node-commonjs": "^0.3.20"
+    "typeorm-ts-node-commonjs": "^0.3.20",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@commitlint/cli": "19.8.0",
@@ -81,6 +90,7 @@
     "@types/dotenv": "8.2.3",
     "@types/express": "5.0.1",
     "@types/jest": "29.5.14",
+    "@types/luxon": "^3.6.2",
     "@types/node": "22.14.0",
     "@types/nodemailer": "6.4.17",
     "@types/passport-google-oauth20": "^2.0.16",
@@ -110,6 +120,9 @@
   },
   "engines": {
     "node": ">=16.0.0"
+  },
+  "prisma": {
+    "seed": "ts-node ./prisma/seed/seed.ts"
   },
   "jest": {
     "verbose": true,

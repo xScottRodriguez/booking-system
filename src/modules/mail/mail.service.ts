@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import { envs } from '@root/src/common/config';
+import { ISendVerificationEmail } from '@root/src/common/interfaces';
 import { compileTemplate, getMessage } from '@root/src/common/utils';
 import { CreateEmailOptions, Resend } from 'resend';
 
@@ -14,16 +15,21 @@ export class MailService implements MailerServiceInterface {
     this.resend = new Resend(envs.resendApiKey);
   }
 
-  async sendVerificationEmail(
-    to: string,
-    token: string,
-    username: string,
-  ): Promise<void> {
-    const url = `${envs.apiBaseUrl}/auth/activate-accounts/?code=${token}`;
+  async sendVerificationEmail({
+    to,
+    token,
+    userId,
+    username,
+  }: ISendVerificationEmail): Promise<void> {
+    const url = `${envs.apiBaseUrl}/auth/activate-accounts?id=${userId}&code=${token}`;
     const [html, subject] = await Promise.all<
       [Promise<string>, Promise<string>]
     >([
-      compileTemplate('transactional', { url: url, username: username }),
+      compileTemplate('transactional', {
+        verificationUrl: url,
+        name: username,
+        appName: envs.appName,
+      }),
       getMessage('mail.subject'),
     ]);
     const payload: CreateEmailOptions = {
@@ -51,7 +57,10 @@ export class MailService implements MailerServiceInterface {
     const url = `${envs.apiBaseUrl}/auth/reset-password/${token}`;
     const [html, subject] = await Promise.all<
       [Promise<string>, Promise<string>]
-    >([compileTemplate('reset-password', { url }), getMessage('mail.subject')]);
+    >([
+      compileTemplate('reset-password', { url }),
+      getMessage('mail.resetPassword'),
+    ]);
 
     const sendMailOptions: CreateEmailOptions = {
       from: envs.senderMail,

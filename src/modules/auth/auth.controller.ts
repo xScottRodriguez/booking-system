@@ -28,6 +28,7 @@ import {
 import { users } from '@prisma/client';
 import { Roles } from '@root/src/common/enums';
 import { RoleAuthGuard } from '@root/src/common/guards';
+import { UserSerialized } from '@root/src/common/types';
 import { validate } from 'class-validator';
 import { Request } from 'express';
 
@@ -85,9 +86,7 @@ export class AuthController {
     },
   })
   @Post('/local/register')
-  create(
-    @Body() createAuthDto: CreateAuthDto,
-  ): Promise<Omit<users, 'password'>> {
+  create(@Body() createAuthDto: CreateAuthDto): Promise<UserSerialized> {
     return this.authService.create(createAuthDto);
   }
 
@@ -139,7 +138,7 @@ export class AuthController {
   })
   @Post('/local/login')
   login(@Body() loginAuthDto: LoginAuthDto): Promise<{
-    user: Omit<users, 'password'>;
+    user: UserSerialized;
     jwt: {
       accessToken: string;
     };
@@ -402,7 +401,7 @@ export class AuthController {
     new RoleAuthGuard(Roles.ADMIN, Roles.AUTHENTICATED),
   )
   @Get('/me')
-  async getProfile(@GetUser() user: users): Promise<Omit<users, 'password'>> {
+  async getProfile(@GetUser() user: users): Promise<UserSerialized> {
     return await this.authService.getProfile(user);
   }
 

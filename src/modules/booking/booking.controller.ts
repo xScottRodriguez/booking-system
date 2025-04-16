@@ -10,7 +10,6 @@ import {
   ClassSerializerInterceptor,
   UseInterceptors,
 } from '@nestjs/common';
-import { Logger } from '@nestjs/common/services';
 import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
@@ -32,11 +31,10 @@ import { UpdateStateBookingDto } from './dto/update-state-booking.dto';
 import { GetUser } from '@/modules/auth/decorators/get-user.decorator';
 
 @ApiTags('Bookings')
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 @UseInterceptors(ClassSerializerInterceptor)
 @Controller('bookings')
 export class BookingController {
-  #logger = new Logger(BookingController.name);
   constructor(private readonly bookingService: BookingService) {}
 
   @ApiCreatedResponse({

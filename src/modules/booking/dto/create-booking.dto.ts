@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+
 import { IsISO8601, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
 export class CreateBookingDto {
   @ApiProperty({
@@ -8,7 +9,7 @@ export class CreateBookingDto {
     message: 'required service',
   })
   @IsNumber()
-  serviceId: number;
+  serviceTypeId: number;
 
   @ApiProperty({
     example: 1,
@@ -18,10 +19,6 @@ export class CreateBookingDto {
   })
   @IsNumber()
   clientId: number;
-
-  @ApiProperty({ example: 'note example' })
-  @IsOptional()
-  note: string;
 
   @IsOptional()
   @ApiProperty({

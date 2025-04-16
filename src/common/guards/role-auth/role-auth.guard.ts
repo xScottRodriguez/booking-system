@@ -21,7 +21,7 @@ export class RoleAuthGuard implements CanActivate {
 
     const { user } = ctx.getRequest();
 
-    if (!this.#roles.includes(user.role.name))
+    if (!this.#roles.includes(user.roles.name.toLowerCase()))
       throw new ForbiddenException('Forbidden Role');
 
     return true;

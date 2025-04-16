@@ -1,8 +1,6 @@
+import { ISendVerificationEmail } from '@root/src/common/interfaces';
+
 export interface MailerServiceInterface {
-  sendVerificationEmail(
-    to: string,
-    token: string,
-    username: string,
-  ): Promise<void>;
+  sendVerificationEmail(params: ISendVerificationEmail): Promise<void>;
   sendPasswordResetEmail(to: string, token: string): Promise<void>;
 }

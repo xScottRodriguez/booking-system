@@ -23,6 +23,8 @@ interface IEnvSchema {
 
   RESEND_API_KEY: string;
   SENDER_MAIL: string;
+
+  APP_NAME: string;
 }
 
 const envSchema = Joi.object<IEnvSchema>({
@@ -47,6 +49,7 @@ const envSchema = Joi.object<IEnvSchema>({
 
   RESEND_API_KEY: Joi.string().required(),
   SENDER_MAIL: Joi.string().required(),
+  APP_NAME: Joi.string().default('MyApp'),
 }).unknown(true);
 
 const { error, value } = envSchema.validate(process.env);
@@ -78,4 +81,6 @@ export const envs = {
 
   resendApiKey: envVars.RESEND_API_KEY,
   senderMail: envVars.SENDER_MAIL,
+
+  appName: envVars.APP_NAME,
 };

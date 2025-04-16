@@ -9,6 +9,7 @@ import * as admin from 'firebase-admin';
 import helmet from 'helmet';
 
 import { envs } from './common/config';
+import { ErrorFormatterInterceptor } from './common/interceptors';
 import { AppModule } from '@/app.module';
 
 async function bootstrap(): Promise<void> {
@@ -30,6 +31,8 @@ async function bootstrap(): Promise<void> {
     }),
   );
   app.use(helmet());
+
+  app.useGlobalInterceptors(new ErrorFormatterInterceptor());
 
   // statics
   app.useStaticAssets(join(__dirname, '..', 'public'));
