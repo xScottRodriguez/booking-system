@@ -1,68 +1,89 @@
 import {
-  Inject,
   Injectable,
+  InternalServerErrorException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 
-import { GlobalScheduleConfig, users } from '@prisma/client';
-import { Providers } from '@root/src/common/enums';
-import { CapacityService } from '@root/src/common/services/capacity.service';
+import {
+  GlobalScheduleConfig,
+  Reservation,
+  ServiceType,
+  users,
+} from '@prisma/client';
+import { DefultResponseDto } from '@root/src/common/dto';
+import {
+  ResponseService,
+  WinstonLoggerService,
+} from '@root/src/common/services';
+import { HttpStatusCode } from 'axios';
 
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import {
   GlobalScheduleConfigRepository,
   ReservationRepository,
+  ServiceRepository,
 } from './repository';
 import { ReservationsWithServices } from './types';
 
 @Injectable()
 export class BookingService {
   constructor(
-    @Inject(Providers.CAPACITY_STRATEGY)
-    private readonly _capacityService: CapacityService,
     private readonly _globalScheduleConfigRepository: GlobalScheduleConfigRepository,
     private readonly _reservationRepository: ReservationRepository,
+    private readonly _logger: WinstonLoggerService,
+    private readonly _serviceTypeRepository: ServiceRepository,
+    private readonly _responseHandler: ResponseService,
   ) {}
-  async create(_createBookingDto: CreateBookingDto): Promise<void> {
-    const { serviceTypeId: _type, date, clientId: _cid } = _createBookingDto;
+  async create(
+    _createBookingDto: CreateBookingDto,
+  ): Promise<DefultResponseDto<Reservation>> {
+    const { serviceTypeId, date, clientId } = _createBookingDto;
 
-    //checkReservationValid
-    const isValid = await this.checkReservationValid(date);
+    try {
+      //checkReservationValid
+      const isValid = await this.checkReservationValid(date, serviceTypeId);
 
-    if (!isValid) throw new UnprocessableEntityException();
+      if (!isValid)
+        throw new UnprocessableEntityException(
+          this._responseHandler.error(
+            undefined,
+            HttpStatusCode.UnprocessableEntity,
+            'No hay disponibilidad',
+          ),
+        );
 
-    // const { client, status } = await this.findServiceClientStatus(
-    //   createBookingDto.serviceId,
-    //   createBookingDto.clientId,
-    // );
-    // const formatDate = new Date(createBookingDto.date).toISOString();
-    // const bookingToSave = this.bookingRepository.create({
-    //
-    //   ...createBookingDto,
-    //   date: formatDate,
-    //   clientId: client,
-    //   statusId: status,
-    // });
-    // const dateToCheck = new Date(createBookingDto.date);
-    // const isValidBooking = await this.checkReservationValid(dateToCheck);
-    // if (isValidBooking)
-    //   throw new ConflictException(
-    //     'A reservation already exists for the time you are trying to book',
-    //   );
-    //
-    // try {
-    //   return await this.bookingRepository.save(bookingToSave);
-    // } catch (error) {
-    //   this.#logger.error(error.message);
-    //
-    //   throw new InternalServerErrorException('Error trying create booking');
-    // }
+      //createa reservation.
+      const data: Reservation = await this._reservationRepository.create({
+        serviceTypeId,
+        date,
+        clientId: clientId,
+      });
+      return this._responseHandler.sanitize(
+        data,
+        ['Reserva Creada Exitosamente'],
+        HttpStatusCode.Created,
+      );
+    } catch (error) {
+      this._logger.error(JSON.stringify(error), {
+        service: BookingService.name,
+        method: 'create',
+      });
+      if (error instanceof UnprocessableEntityException) throw error;
+
+      throw new InternalServerErrorException(
+        this._responseHandler.error(
+          undefined,
+          HttpStatusCode.InternalServerError,
+          'Error trying create booking',
+        ),
+      );
+    }
   }
 
   async checkReservationValid(
     _date: string,
-    _excludeBookingId?: number,
+    serviceTypeId: number,
   ): Promise<boolean> {
     //get unit dailyCapacity;
     const globalScheduleConfig: GlobalScheduleConfig =
@@ -76,6 +97,8 @@ export class BookingService {
     const data: ReservationsWithServices[] =
       await this._reservationRepository.findOfTheDay(_date);
 
+    if (!data.length) return true;
+
     //check
     const totalUnitsusedInTheCurrentDay: number = data.reduce(
       (acc, reservation) => {
@@ -83,12 +106,19 @@ export class BookingService {
       },
       0,
     );
-
     //check if the total units used is less than the daily capacity
     const totalUnitsAvailable: number =
       defaultTotalUnits - totalUnitsusedInTheCurrentDay;
 
-    return totalUnitsAvailable > 0;
+    const service: ServiceType =
+      await this._serviceTypeRepository.findById(serviceTypeId);
+
+    if (!service) throw new Error('Service not found');
+
+    //check if the service type is valid
+    const unitsOfServiceType: number = service.unitsRequired;
+
+    return totalUnitsAvailable >= unitsOfServiceType;
   }
   async findServiceClientStatus(
     _clientId: number,

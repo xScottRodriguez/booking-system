@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
 import { envs } from '@root/src/common/config';
+import { ResponseService } from '@root/src/common/services';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -11,6 +12,7 @@ import { EncoderService } from './encoder/encoder.service';
 import { UserRepository } from './repository/users.repository';
 import { GoogleStrategy } from './strategies/google-strategy';
 import { JwtStrategy } from './strategies/jwtStrategy';
+import { LoggerModule } from '../logger/logger.module';
 import { MailModule } from '../mail/mail.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { RoleModule } from '@/modules/role/role.module';
@@ -32,6 +34,7 @@ import { RoleModule } from '@/modules/role/role.module';
     RoleModule,
     PrismaModule,
     MailModule,
+    LoggerModule,
   ],
   controllers: [AuthController],
   providers: [
@@ -40,6 +43,7 @@ import { RoleModule } from '@/modules/role/role.module';
     JwtStrategy,
     GoogleStrategy,
     UserRepository,
+    ResponseService,
   ],
   exports: [JwtStrategy, PassportModule, UserRepository],
 })

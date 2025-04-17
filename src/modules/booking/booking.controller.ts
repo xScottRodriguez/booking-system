@@ -20,7 +20,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { users } from '@prisma/client';
+import { Reservation, users } from '@prisma/client';
+import { DefultResponseDto } from '@root/src/common/dto';
 import { Roles } from '@root/src/common/enums';
 import { RoleAuthGuard } from '@root/src/common/guards';
 
@@ -64,7 +65,9 @@ export class BookingController {
     new RoleAuthGuard(Roles.ADMIN, Roles.AUTHENTICATED),
   )
   @Post()
-  create(@Body() createBookingDto: CreateBookingDto): Promise<void> {
+  create(
+    @Body() createBookingDto: CreateBookingDto,
+  ): Promise<DefultResponseDto<Reservation>> {
     return this.bookingService.create(createBookingDto);
   }
 

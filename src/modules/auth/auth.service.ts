@@ -4,7 +4,6 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
-  Logger,
   NotFoundException,
   UnauthorizedException,
   UnprocessableEntityException,
@@ -14,9 +13,14 @@ import { JwtService } from '@nestjs/jwt';
 import { randomUUID } from 'crypto';
 
 import { roles, users } from '@prisma/client';
+import { DefultResponseDto } from '@root/src/common/dto';
 import { IGoogleAccount } from '@root/src/common/interfaces';
+import {
+  ResponseService,
+  WinstonLoggerService,
+} from '@root/src/common/services';
 import { UserSerialized } from '@root/src/common/types';
-import { AxiosError } from 'axios';
+import { AxiosError, HttpStatusCode } from 'axios';
 import { Request } from 'express';
 import { catchError, firstValueFrom } from 'rxjs';
 
@@ -35,7 +39,6 @@ import { MailService } from '@/modules/mail/mail.service';
 
 @Injectable()
 export class AuthService {
-  #logger = new Logger(AuthService.name);
   constructor(
     private readonly userRepository: UserRepository,
     private readonly roleRepository: RoleRepository,
@@ -47,9 +50,14 @@ export class AuthService {
     private mailService: MailService,
 
     private readonly httpService: HttpService,
+    private readonly _logger: WinstonLoggerService,
+
+    private readonly _responseHandler: ResponseService,
   ) {}
 
-  async create(createAuthDto: CreateAuthDto): Promise<UserSerialized> {
+  async create(
+    createAuthDto: CreateAuthDto,
+  ): Promise<DefultResponseDto<UserSerialized>> {
     try {
       const { password } = createAuthDto;
       const plainTextToHash =
@@ -64,7 +72,7 @@ export class AuthService {
         },
         role.id,
       );
-      await this.mailService.sendVerificationEmail({
+      this.mailService.sendVerificationEmail({
         to: user.email,
         token: user.activationToken,
         userId: user.id,
@@ -77,40 +85,82 @@ export class AuthService {
         activationToken: _activationToken,
         ...userWithoutPassword
       } = user;
-      return userWithoutPassword;
+      return this._responseHandler.sanitize<UserSerialized>(
+        userWithoutPassword,
+        ['User Created'],
+        HttpStatusCode.Created,
+      );
     } catch (error) {
-      this.#logger.error({ error });
+      this._logger.error(error.message, {
+        stack: error.stack,
+        context: AuthService.name,
+      });
 
       if (error.code === 'P2002')
-        throw new ConflictException('This email is already registered');
+        throw new ConflictException(
+          this._responseHandler.error('Error', HttpStatusCode.Conflict, [
+            'Email already registered',
+          ]),
+        );
 
-      throw new InternalServerErrorException('Error creating user');
+      throw new InternalServerErrorException(
+        this._responseHandler.error(
+          'Error',
+          HttpStatusCode.InternalServerError,
+          ['Error trying to create user'],
+        ),
+      );
     }
   }
 
-  async login(loginAuthDto: LoginAuthDto): Promise<{
-    user: UserSerialized;
-    jwt: {
-      accessToken: string;
-    };
-  }> {
+  async login(loginAuthDto: LoginAuthDto): Promise<
+    DefultResponseDto<{
+      user: UserSerialized;
+      jwt: {
+        accessToken: string;
+      };
+    }>
+  > {
     const user = await this.userRepository.findByEmail(loginAuthDto.email);
 
-    if (user.isGoogleAccount)
+    if (!user)
+      throw new NotFoundException(
+        this._responseHandler.error(['Error'], HttpStatusCode.NotFound, [
+          'User Not Found',
+        ]),
+      );
+
+    if (user?.isGoogleAccount)
       throw new BadRequestException(
-        'This email is already registered with a google account',
+        this._responseHandler.error(
+          ['Error'],
+          HttpStatusCode.BadRequest,
+          'This email is already registered with a google account',
+        ),
       );
 
     const checkPassword = await this.encoderService.checkPassword(
       loginAuthDto.password,
-      user.password,
+      user?.password,
     );
 
     if (!checkPassword)
-      throw new UnauthorizedException('Please check your credentials');
+      throw new UnauthorizedException(
+        this._responseHandler.error(
+          ['Error'],
+          HttpStatusCode.Unauthorized,
+          'Please check your credentials',
+        ),
+      );
 
     if (!user.isActive)
-      throw new UnauthorizedException('Please verify your account');
+      throw new UnauthorizedException(
+        this._responseHandler.error(
+          ['Error'],
+          HttpStatusCode.Unauthorized,
+          'Please verify your account',
+        ),
+      );
 
     const { id, email, isActive, roleId } = user;
     const payload: JwtPayload = {
@@ -129,13 +179,25 @@ export class AuthService {
         ...userWithoutPassword
       } = user;
 
-      return {
-        user: userWithoutPassword,
-        jwt: { accessToken },
-      };
+      return this._responseHandler.sanitize(
+        {
+          user: userWithoutPassword,
+          jwt: { accessToken },
+        },
+        ['Login Success'],
+        HttpStatusCode.Ok,
+      );
     } catch (error) {
-      this.#logger.error(error);
-      throw new InternalServerErrorException('Error trying to sign in');
+      this._logger.error(error.message, {
+        stack: error.stack,
+        context: AuthService.name,
+      });
+
+      throw new InternalServerErrorException(
+        this._responseHandler.error([''], HttpStatusCode.InternalServerError, [
+          'Error trying sign in',
+        ]),
+      );
     }
   }
 
@@ -146,7 +208,13 @@ export class AuthService {
       code,
     );
     if (!user)
-      throw new UnprocessableEntityException('This action can not be done');
+      throw new UnprocessableEntityException(
+        this._responseHandler.error(
+          ['Error'],
+          HttpStatusCode.UnprocessableEntity,
+          'This action can not be done',
+        ),
+      );
 
     try {
       await this.userRepository.updateUser(user.id, {
@@ -155,8 +223,17 @@ export class AuthService {
         activationToken: null,
       });
     } catch (error) {
-      this.#logger.error(error.message);
-      throw new InternalServerErrorException('Error trying activation account');
+      this._logger.error(error.message, {
+        stack: error.stack,
+        context: AuthService.name,
+      });
+      throw new InternalServerErrorException(
+        this._responseHandler.error(
+          ['Error'],
+          HttpStatusCode.InternalServerError,
+          'Error trying activation account',
+        ),
+      );
     }
   }
 
@@ -170,7 +247,13 @@ export class AuthService {
   async findByEmail(email: string): Promise<users> {
     const user = await this.userRepository.findByEmail(email);
     if (!user)
-      throw new NotFoundException(`user with email: ${email} not found`);
+      throw new NotFoundException(
+        this._responseHandler.error(
+          ['Error'],
+          HttpStatusCode.NotFound,
+          'User not found',
+        ),
+      );
 
     return user;
   }
@@ -192,8 +275,17 @@ export class AuthService {
         resetPasswordToken,
       );
     } catch (error) {
-      this.#logger.error(error.message);
-      throw new InternalServerErrorException('Error trying to reset password');
+      this._logger.error(error.message, {
+        stack: error.stack,
+        context: AuthService.name,
+      });
+      throw new InternalServerErrorException(
+        this._responseHandler.error(
+          ['Error'],
+          HttpStatusCode.InternalServerError,
+          'Error trying to send email',
+        ),
+      );
     }
   }
 
@@ -218,7 +310,10 @@ export class AuthService {
           'Password successfully updated. Please log in with your new password at your next login.',
       };
     } catch (error) {
-      this.#logger.error(error.message);
+      this._logger.error(error.message, {
+        stack: error.stack,
+        context: AuthService.name,
+      });
       throw new InternalServerErrorException('Error trying to reset');
     }
   }
@@ -244,7 +339,14 @@ export class AuthService {
       user.password,
     );
 
-    if (!isValid) throw new BadRequestException('old password does not match');
+    if (!isValid)
+      throw new BadRequestException(
+        this._responseHandler.error(
+          ['Error'],
+          HttpStatusCode.BadRequest,
+          'Old password does not match',
+        ),
+      );
 
     const hashPassword = await this.encoderService.encodePassword(newPassword);
     await this.userRepository.updateUser(user.id, {
@@ -265,7 +367,14 @@ export class AuthService {
         };
       }
   > {
-    if (!req.user) throw new NotFoundException('Not user from google');
+    if (!req.user)
+      throw new NotFoundException(
+        this._responseHandler.error(
+          ['Error'],
+          HttpStatusCode.NotFound,
+          'User not found',
+        ),
+      );
 
     const user = {
       username: `${req.user?.['firstName']} ${req.user?.['lastName']}`,
@@ -285,7 +394,11 @@ export class AuthService {
   }> {
     if (!loginAuthDto.isGoogleAccount)
       throw new ConflictException(
-        'This email is already registered with a local account',
+        this._responseHandler.error(
+          ['Error'],
+          HttpStatusCode.Conflict,
+          'This email is already registered with a local account',
+        ),
       );
 
     const { id, email, isActive, roleId } = loginAuthDto;
@@ -302,8 +415,17 @@ export class AuthService {
         jwt: { accessToken: this.jwtService.sign(payload) },
       };
     } catch (error) {
-      this.#logger.error(error);
-      throw new InternalServerErrorException('Error trying to sign in');
+      this._logger.error(error.message, {
+        stack: error.stack,
+        context: AuthService.name,
+      });
+      throw new InternalServerErrorException(
+        this._responseHandler.error(
+          ['Error'],
+          HttpStatusCode.InternalServerError,
+          'Error trying sign in',
+        ),
+      );
     }
   }
 
@@ -328,7 +450,11 @@ export class AuthService {
         })
         .pipe(
           catchError((error: AxiosError) => {
-            this.#logger.error(error.response.data);
+            this._logger.error('Error interno', {
+              stack: error.stack,
+              error: error,
+              context: AuthService.name,
+            });
             throw new Error('An error happened!');
           }),
         ),
@@ -372,11 +498,26 @@ export class AuthService {
       return { user, jwt: accessToken };
     } catch (error) {
       if (error.code === '23505')
-        throw new ConflictException('This email is already registered');
+        throw new ConflictException(
+          this._responseHandler.error(
+            ['Error'],
+            HttpStatusCode.Conflict,
+            'This email is already registered',
+          ),
+        );
 
-      this.#logger.debug(error);
+      this._logger.error(error.message, {
+        stack: error.stack,
+        context: AuthService.name,
+      });
 
-      throw new InternalServerErrorException('Error creating user');
+      throw new InternalServerErrorException(
+        this._responseHandler.error(
+          ['Error'],
+          HttpStatusCode.InternalServerError,
+          'Error creating user',
+        ),
+      );
     }
   }
 
@@ -406,7 +547,7 @@ export class AuthService {
     //
     //   return !!user.deviceToken;
     // } catch (error) {
-    //   this.#logger.error(error.message);
+    //   this._logger.error(error.message);
     //   throw new InternalServerErrorException('Something Wen Wrong');
     // }
   }

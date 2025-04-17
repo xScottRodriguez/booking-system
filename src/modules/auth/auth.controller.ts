@@ -26,6 +26,7 @@ import {
 } from '@nestjs/swagger';
 
 import { users } from '@prisma/client';
+import { DefultResponseDto } from '@root/src/common/dto';
 import { Roles } from '@root/src/common/enums';
 import { RoleAuthGuard } from '@root/src/common/guards';
 import { UserSerialized } from '@root/src/common/types';
@@ -86,7 +87,9 @@ export class AuthController {
     },
   })
   @Post('/local/register')
-  create(@Body() createAuthDto: CreateAuthDto): Promise<UserSerialized> {
+  create(
+    @Body() createAuthDto: CreateAuthDto,
+  ): Promise<DefultResponseDto<UserSerialized>> {
     return this.authService.create(createAuthDto);
   }
 
@@ -137,12 +140,14 @@ export class AuthController {
     description: 'NotFoundException',
   })
   @Post('/local/login')
-  login(@Body() loginAuthDto: LoginAuthDto): Promise<{
-    user: UserSerialized;
-    jwt: {
-      accessToken: string;
-    };
-  }> {
+  login(@Body() loginAuthDto: LoginAuthDto): Promise<
+    DefultResponseDto<{
+      user: UserSerialized;
+      jwt: {
+        accessToken: string;
+      };
+    }>
+  > {
     return this.authService.login(loginAuthDto);
   }
 

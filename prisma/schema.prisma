@@ -31,17 +31,18 @@ model status {
 }
 
 model users {
-  id                 Int       @id @default(autoincrement())
-  username           String    @db.VarChar
-  email              String    @unique(map: "unique_user_email")
+  id                 Int           @id @default(autoincrement())
+  username           String        @db.VarChar
+  email              String        @unique(map: "unique_user_email")
   password           String?
-  isActive           Boolean   @default(false) @map("is_active")
-  isGoogleAccount    Boolean   @default(false) @map("is_google_account")
-  activationToken    String?   @unique(map: "unique_activation_token") @map("activation_token") @db.VarChar
-  resetPasswordToken String?   @unique(map: "unique_reset_password_token") @map("reset_password_token") @db.VarChar
-  roleId             Int?      @map("role_id")
+  isActive           Boolean       @default(false) @map("is_active")
+  isGoogleAccount    Boolean       @default(false) @map("is_google_account")
+  activationToken    String?       @unique(map: "unique_activation_token") @map("activation_token") @db.VarChar
+  resetPasswordToken String?       @unique(map: "unique_reset_password_token") @map("reset_password_token") @db.VarChar
+  roleId             Int?          @map("role_id")
   booking            booking[]
-  roles              roles?    @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_users_roles")
+  roles              roles?        @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_users_roles")
+  Reservation        Reservation[]
 }
 
 model ServiceType {
@@ -59,8 +60,7 @@ model ServiceType {
 
 model Reservation {
   id              Int               @id @default(autoincrement())
-  clientName      String?           @map("client_name")
-  clientPhone     String?           @map("client_phone")
+  clientId        Int               @map("client_id")
   serviceTypeId   Int               @map("service_type_id")
   reservationDate DateTime          @map("reservation_date") // solo la fecha (puedes cortar la hora en la lógica)
   scheduledTime   DateTime?         @map("scheduled_time") // opcional: si quieres hora específica
@@ -69,6 +69,7 @@ model Reservation {
   updatedAt       DateTime          @updatedAt @map("updated_at")
 
   serviceType ServiceType @relation(fields: [serviceTypeId], references: [id])
+  client      users       @relation(fields: [clientId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_reservation_client")
 
   @@map("reservation")
 }

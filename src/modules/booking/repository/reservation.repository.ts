@@ -1,18 +1,21 @@
 import { Injectable } from '@nestjs/common';
 
+import { Reservation, ReservationStatus } from '@prisma/client';
 import * as luxon from 'luxon';
 
 import { PrismaService } from '../../prisma/prisma.service';
+import { CreateBookingDto } from '../dto/create-booking.dto';
 import { ReservationsWithServices } from '../types';
 
 @Injectable()
 export class ReservationRepository {
   constructor(private readonly _prisma: PrismaService) {}
   findOfTheDay(date: string): Promise<ReservationsWithServices[]> {
+    const exactDate = luxon.DateTime.fromISO(date).toJSDate();
     return this._prisma.reservation.findMany({
       where: {
         reservationDate: {
-          equals: luxon.DateTime.fromISO(date).toFormat('yyyy-MM-dd'),
+          equals: exactDate,
         },
       },
       include: {
@@ -22,6 +25,21 @@ export class ReservationRepository {
             name: true,
           },
         },
+      },
+    });
+  }
+
+  create(createBookingDto: CreateBookingDto): Promise<Reservation> {
+    const { serviceTypeId, date, clientId } = createBookingDto;
+
+    const reservationDate: Date = luxon.DateTime.fromISO(date).toJSDate();
+    return this._prisma.reservation.create({
+      data: {
+        serviceTypeId: serviceTypeId,
+        clientId: clientId,
+        status: ReservationStatus.confirmada,
+        reservationDate: reservationDate,
+        scheduledTime: reservationDate,
       },
     });
   }
