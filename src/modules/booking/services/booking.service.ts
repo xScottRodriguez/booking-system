@@ -4,12 +4,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 
-import {
-  GlobalScheduleConfig,
-  Reservation,
-  ServiceType,
-  users,
-} from '@prisma/client';
+import { Reservation, users } from '@prisma/client';
 import { DefultResponseDto } from '@root/src/common/dto';
 import {
   ResponseService,
@@ -17,14 +12,16 @@ import {
 } from '@root/src/common/services';
 import { HttpStatusCode } from 'axios';
 
-import { CreateBookingDto } from './dto/create-booking.dto';
-import { UpdateBookingDto } from './dto/update-booking.dto';
+import { DailyCapacityValidatorService } from './daily-capacity-validator.service';
 import {
   GlobalScheduleConfigRepository,
   ReservationRepository,
   ServiceRepository,
-} from './repository';
-import { ReservationsWithServices } from './types';
+  UnitSettingRepository,
+} from '../repository/';
+import { ReservationsWithServices } from '../types';
+import { SchedulerService } from './scheduler.service';
+import { CreateBookingDto, UpdateBookingDto } from '../dto';
 
 @Injectable()
 export class BookingService {
@@ -34,6 +31,9 @@ export class BookingService {
     private readonly _logger: WinstonLoggerService,
     private readonly _serviceTypeRepository: ServiceRepository,
     private readonly _responseHandler: ResponseService,
+    private readonly _unitSettingsRepository: UnitSettingRepository,
+    private readonly _schedulerService: SchedulerService,
+    private readonly _dailyCapacityValidatorService: DailyCapacityValidatorService,
   ) {}
   async create(
     _createBookingDto: CreateBookingDto,
@@ -42,9 +42,11 @@ export class BookingService {
 
     try {
       //checkReservationValid
-      const isValid = await this.checkReservationValid(date, serviceTypeId);
-
-      if (!isValid)
+      const [isReservationValid, isSlotAvaible] = await Promise.all([
+        this.checkReservationValid(date, serviceTypeId),
+        this.isTimeSlotAvailable(date, serviceTypeId),
+      ]);
+      if (!isReservationValid || !isSlotAvaible)
         throw new UnprocessableEntityException(
           this._responseHandler.error(
             undefined,
@@ -65,7 +67,7 @@ export class BookingService {
         HttpStatusCode.Created,
       );
     } catch (error) {
-      this._logger.error(JSON.stringify(error), {
+      this._logger.error(error, {
         service: BookingService.name,
         method: 'create',
       });
@@ -85,41 +87,70 @@ export class BookingService {
     _date: string,
     serviceTypeId: number,
   ): Promise<boolean> {
-    //get unit dailyCapacity;
-    const globalScheduleConfig: GlobalScheduleConfig =
-      await this._globalScheduleConfigRepository.getGlobalScheduleConfig();
+    const [globalConfig, service] = await Promise.all([
+      this._globalScheduleConfigRepository.getGlobalScheduleConfig(),
+      this._serviceTypeRepository.findById(serviceTypeId),
+    ]);
 
-    if (!globalScheduleConfig)
-      throw new Error('Global schedule config not found');
+    if (!globalConfig || !service) {
+      throw new UnprocessableEntityException(
+        this._responseHandler.error(
+          undefined,
+          HttpStatusCode.UnprocessableEntity,
+          'Global schedule config or service not found',
+        ),
+      );
+    }
 
-    const { defaultTotalUnits } = globalScheduleConfig;
     //get reservations of the day joining the service type
-    const data: ReservationsWithServices[] =
+    const reservations: ReservationsWithServices[] =
       await this._reservationRepository.findOfTheDay(_date);
 
-    if (!data.length) return true;
+    if (!reservations.length) return true;
 
-    //check
-    const totalUnitsusedInTheCurrentDay: number = data.reduce(
-      (acc, reservation) => {
-        return acc + reservation.serviceType.unitsRequired;
-      },
+    const totalUnitsUsed = reservations.reduce(
+      (sum, reservation) => sum + reservation.serviceType.unitsRequired,
       0,
     );
-    //check if the total units used is less than the daily capacity
-    const totalUnitsAvailable: number =
-      defaultTotalUnits - totalUnitsusedInTheCurrentDay;
 
-    const service: ServiceType =
-      await this._serviceTypeRepository.findById(serviceTypeId);
-
-    if (!service) throw new Error('Service not found');
-
-    //check if the service type is valid
-    const unitsOfServiceType: number = service.unitsRequired;
-
-    return totalUnitsAvailable >= unitsOfServiceType;
+    return this._dailyCapacityValidatorService.isReservationValid(
+      totalUnitsUsed,
+      service.unitsRequired,
+      globalConfig.defaultTotalUnits,
+    );
   }
+
+  async isTimeSlotAvailable(
+    IsoDate: string,
+    serviceTypeId: number,
+  ): Promise<boolean> {
+    const [service, unitSetting, reservations] = await Promise.all([
+      this._serviceTypeRepository.findById(serviceTypeId),
+      this._unitSettingsRepository.getUnitSettingsById(),
+      this._reservationRepository.findOfTheDay(IsoDate),
+    ]);
+
+    if (!service || !unitSetting)
+      throw new UnprocessableEntityException(
+        this._responseHandler.error(
+          undefined,
+          HttpStatusCode.UnprocessableEntity,
+          'Service or global schedule config not found',
+        ),
+      );
+
+    if (!reservations.length) return true;
+
+    const SlotAvailable: boolean = this._schedulerService.isTimeSlotAvailable({
+      isoDate: IsoDate,
+      reservations: reservations,
+      duration: service.unitsRequired,
+      unitsRequiredOfService: unitSetting.unitDurationMinutes,
+    });
+
+    return SlotAvailable;
+  }
+
   async findServiceClientStatus(
     _clientId: number,
     _stateId?: number,

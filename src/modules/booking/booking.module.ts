@@ -6,13 +6,18 @@ import { CapacityService } from '@root/src/common/services/capacity.service';
 import { DynamicUnitDurationStrategy } from '@root/src/common/strategy';
 
 import { BookingController } from './booking.controller';
-import { BookingService } from './booking.service';
-import { NotificationService } from './notification.service';
 import {
   GlobalScheduleConfigRepository,
   ReservationRepository,
   ServiceRepository,
+  UnitSettingRepository,
 } from './repository';
+import {
+  BookingService,
+  DailyCapacityValidatorService,
+  NotificationService,
+  SchedulerService,
+} from './services';
 import { AuthModule } from '../auth/auth.module';
 import { LoggerModule } from '../logger/logger.module';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -36,6 +41,9 @@ import { RoleService } from '@/modules/role/role.service';
     ReservationRepository,
     ServiceRepository,
     GlobalScheduleConfigRepository,
+    UnitSettingRepository,
+    SchedulerService,
+    DailyCapacityValidatorService,
   ],
   exports: [CapacityService],
 })

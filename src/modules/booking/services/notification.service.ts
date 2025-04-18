@@ -3,8 +3,8 @@ import { Cron } from '@nestjs/schedule';
 
 import * as admin from 'firebase-admin';
 
-import { IPayloadNotification } from './interfaces/bookingNotifications.interface';
-import { UserRepository } from '../auth/repository';
+import { UserRepository } from '../../auth/repository';
+import { IPayloadNotification } from '../interfaces/bookingNotifications.interface';
 
 @Injectable()
 export class NotificationService {

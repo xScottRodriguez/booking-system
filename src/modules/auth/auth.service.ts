@@ -267,7 +267,6 @@ export class AuthService {
 
       const resetPasswordToken = randomUUID();
       await this.userRepository.updateUser(user.id, {
-        ...user,
         resetPasswordToken,
       });
       await this.mailService.sendPasswordResetEmail(
@@ -350,7 +349,6 @@ export class AuthService {
 
     const hashPassword = await this.encoderService.encodePassword(newPassword);
     await this.userRepository.updateUser(user.id, {
-      ...user,
       password: hashPassword,
     });
   }

@@ -25,10 +25,12 @@ import { DefultResponseDto } from '@root/src/common/dto';
 import { Roles } from '@root/src/common/enums';
 import { RoleAuthGuard } from '@root/src/common/guards';
 
-import { BookingService } from './booking.service';
-import { CreateBookingDto } from './dto/create-booking.dto';
-import { UpdateBookingDto } from './dto/update-booking.dto';
-import { UpdateStateBookingDto } from './dto/update-state-booking.dto';
+import {
+  CreateBookingDto,
+  UpdateBookingDto,
+  UpdateStateBookingDto,
+} from './dto';
+import { BookingService } from './services';
 import { GetUser } from '@/modules/auth/decorators/get-user.decorator';
 
 @ApiTags('Bookings')
