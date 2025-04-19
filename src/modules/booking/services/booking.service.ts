@@ -4,8 +4,10 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 
-import { Reservation, users } from '@prisma/client';
+import { Reservation } from '@prisma/client';
 import { DefultResponseDto } from '@root/src/common/dto';
+import { PaginationQueryDto } from '@root/src/common/interfaces';
+import { IPagination } from '@root/src/common/interfaces/pagination.interface';
 import {
   ResponseService,
   WinstonLoggerService,
@@ -21,7 +23,7 @@ import {
 } from '../repository/';
 import { ReservationsWithServices } from '../types';
 import { SchedulerService } from './scheduler.service';
-import { CreateBookingDto, UpdateBookingDto } from '../dto';
+import { CreateBookingDto, FiltersDto, UpdateBookingDto } from '../dto';
 
 @Injectable()
 export class BookingService {
@@ -176,36 +178,19 @@ export class BookingService {
     // return { client, status };
   }
 
-  async findAll(_user: users): Promise<void> {
-    // try {
-    //   // get admin role
-    //   const role = await this.roleService.getOne(1);
-    //   if (user.roleId === role.id)
-    //     return await this.bookingRepository.find({
-    //       relations: {
-    //         clientId: { role: true },
-    //         statusId: true,
-    //       },
-    //       order: {
-    //         date: OrderType.DESC,
-    //       },
-    //     });
-    //
-    //   return await this.bookingRepository.find({
-    //     relations: {
-    //       clientId: true,
-    //       statusId: true,
-    //     },
-    //     where: {
-    //       clientId: {
-    //         id: user.id,
-    //       },
-    //     },
-    //   });
-    // } catch (error) {
-    //   this.#logger.error(error.message);
-    //   throw new InternalServerErrorException('Error trying find bookings');
-    // }
+  findAll(
+    pagination: PaginationQueryDto<FiltersDto>,
+  ): Promise<IPagination<Reservation>> {
+    try {
+      return this._reservationRepository.findAll(pagination);
+    } catch (error) {
+      this._logger.error(error.message, {
+        service: BookingService.name,
+        method: 'findAll',
+        stack: error.stack,
+      });
+      throw new InternalServerErrorException('Error trying find bookings');
+    }
   }
 
   async update(

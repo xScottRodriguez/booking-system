@@ -2,6 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 
 import {
   IsNumber,
+  IsObject,
   IsOptional,
   IsPositive,
   IsString,
@@ -11,7 +12,7 @@ import {
 
 import { OrderType } from '../enums';
 
-export class PaginationQueryDto {
+export class PaginationQueryDto<Filter> {
   @ApiPropertyOptional({
     minimum: 1,
     maximum: 50,
@@ -48,4 +49,9 @@ export class PaginationQueryDto {
   @IsString()
   @IsOptional()
   readonly order?: OrderType = OrderType.ASC;
+
+  @ApiPropertyOptional()
+  @IsOptional({ each: true })
+  @IsObject({ each: true })
+  filters?: Filter;
 }

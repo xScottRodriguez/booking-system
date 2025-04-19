@@ -44,4 +44,6 @@ async function compileTemplate(
   return compiled(data);
 }
 
+export * from './page-builder';
+
 export { getMessage, compileTemplate };

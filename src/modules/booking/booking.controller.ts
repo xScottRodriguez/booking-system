@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
   UseGuards,
   ClassSerializerInterceptor,
   UseInterceptors,
@@ -20,18 +21,20 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { Reservation, users } from '@prisma/client';
+import { Reservation } from '@prisma/client';
 import { DefultResponseDto } from '@root/src/common/dto';
 import { Roles } from '@root/src/common/enums';
 import { RoleAuthGuard } from '@root/src/common/guards';
+import { PaginationQueryDto } from '@root/src/common/interfaces';
+import { IPagination } from '@root/src/common/interfaces/pagination.interface';
 
 import {
   CreateBookingDto,
+  FiltersDto,
   UpdateBookingDto,
   UpdateStateBookingDto,
 } from './dto';
 import { BookingService } from './services';
-import { GetUser } from '@/modules/auth/decorators/get-user.decorator';
 
 @ApiTags('Bookings')
 @ApiBearerAuth('access-token')
@@ -88,8 +91,10 @@ export class BookingController {
   })
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
   @Get()
-  findAll(@GetUser() user: users): Promise<users[] | void> {
-    return this.bookingService.findAll(user);
+  findAll(
+    @Query() pagination: PaginationQueryDto<FiltersDto>,
+  ): Promise<IPagination<Reservation>> {
+    return this.bookingService.findAll(pagination);
   }
 
   @ApiOkResponse({
