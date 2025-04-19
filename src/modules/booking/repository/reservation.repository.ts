@@ -5,7 +5,7 @@ import { OrderType } from '@root/src/common/enums';
 import { PaginationQueryDto } from '@root/src/common/interfaces';
 import { IPagination } from '@root/src/common/interfaces/pagination.interface';
 import pageBuilder from '@root/src/common/utils/page-builder';
-import * as luxon from 'luxon';
+import { DateTime } from 'luxon';
 
 import { PrismaService } from '../../prisma/prisma.service';
 import { FiltersDto } from '../dto';
@@ -15,13 +15,15 @@ import { ReservationsWithServices } from '../types';
 @Injectable()
 export class ReservationRepository {
   constructor(private readonly _prisma: PrismaService) {}
-  findOfTheDay(date: string): Promise<ReservationsWithServices[]> {
-    const exactDate = luxon.DateTime.fromISO(date).toJSDate();
+  findOfTheDay(
+    date: string,
+    hour: string,
+  ): Promise<ReservationsWithServices[]> {
+    const reservationDate = DateTime.fromISO(date).toFormat('yyyy-MM-dd');
     return this._prisma.reservation.findMany({
       where: {
-        reservationDate: {
-          equals: exactDate,
-        },
+        reservationDate: reservationDate,
+        scheduledTime: hour,
       },
       include: {
         serviceType: {
@@ -35,16 +37,15 @@ export class ReservationRepository {
   }
 
   create(createBookingDto: CreateBookingDto): Promise<Reservation> {
-    const { serviceTypeId, date, clientId } = createBookingDto;
+    const { serviceTypeId, date, clientId, hour } = createBookingDto;
 
-    const reservationDate: Date = luxon.DateTime.fromISO(date).toJSDate();
     return this._prisma.reservation.create({
       data: {
         serviceTypeId: serviceTypeId,
         clientId: clientId,
         status: ReservationStatus.confirmada,
-        reservationDate: reservationDate,
-        scheduledTime: reservationDate,
+        reservationDate: date,
+        scheduledTime: hour,
       },
     });
   }
@@ -56,15 +57,10 @@ export class ReservationRepository {
 
     const where: Prisma.ReservationWhereInput = {};
 
-    if (filters?.fromDate) {
+    if (filters?.fromDate && filters?.toDate) {
       where.reservationDate = {
-        gte: luxon.DateTime.fromISO(filters.fromDate).toJSDate(),
-      };
-    }
-
-    if (filters?.toDate) {
-      where.reservationDate = {
-        lte: luxon.DateTime.fromISO(filters.toDate).toJSDate(),
+        gte: filters.fromDate,
+        lt: filters.toDate,
       };
     }
 
@@ -79,6 +75,8 @@ export class ReservationRepository {
     if (filters?.clientId) {
       where.clientId = +filters.clientId;
     }
+
+    console.log({ where });
 
     return pageBuilder<
       Reservation,

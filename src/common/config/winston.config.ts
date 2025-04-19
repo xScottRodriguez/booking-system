@@ -9,7 +9,11 @@ const logDir = 'logs';
 if (!existsSync(logDir)) {
   mkdirSync(logDir);
 }
-
+const formatPrinter = winston.format.printf(
+  ({ level, message, timestamp, ...meta }) => {
+    return `${timestamp} ${level}: ${message} ${Object.keys(meta).length ? '| ' + JSON.stringify(meta) : ''}`;
+  },
+);
 export const winstonConfig: WinstonModuleOptions = {
   level: 'info',
   format: winston.format.combine(
@@ -25,6 +29,7 @@ export const winstonConfig: WinstonModuleOptions = {
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.json(),
+        formatPrinter,
       ),
       datePattern: 'YYYY-MM-DD',
       zippedArchive: false,
@@ -39,6 +44,7 @@ export const winstonConfig: WinstonModuleOptions = {
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.json(),
+        formatPrinter,
       ),
       datePattern: 'YYYY-MM-DD',
       zippedArchive: false,
@@ -53,6 +59,7 @@ export const winstonConfig: WinstonModuleOptions = {
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.json(),
+        formatPrinter,
       ),
       datePattern: 'YYYY-MM-DD',
       zippedArchive: false,
@@ -66,6 +73,7 @@ export const winstonConfig: WinstonModuleOptions = {
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.json(),
+        formatPrinter,
       ),
       datePattern: 'YYYY-MM-DD',
       zippedArchive: true,
@@ -80,9 +88,7 @@ export const winstonConfig: WinstonModuleOptions = {
         winston.format.splat(),
         winston.format.timestamp(),
         winston.format.colorize(),
-        winston.format.printf(({ level, message, timestamp, ...meta }) => {
-          return `${timestamp} ${level}: ${message} ${Object.keys(meta).length ? '| ' + JSON.stringify(meta) : ''}`;
-        }),
+        formatPrinter,
       ),
     }),
   ],

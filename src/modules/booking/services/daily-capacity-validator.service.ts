@@ -20,6 +20,9 @@ export class DailyCapacityValidatorService {
     unitsRequired: number,
     defaultTotalUnits: number,
   ): boolean {
-    return unitsAlreadyUsed + unitsRequired <= defaultTotalUnits;
+    return (
+      Number(unitsAlreadyUsed) + Number(unitsRequired) <=
+      Number(defaultTotalUnits)
+    );
   }
 }

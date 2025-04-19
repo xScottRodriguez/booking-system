@@ -62,8 +62,8 @@ model Reservation {
   id              Int               @id @default(autoincrement())
   clientId        Int               @map("client_id")
   serviceTypeId   Int               @map("service_type_id")
-  reservationDate DateTime          @map("reservation_date") // solo la fecha (puedes cortar la hora en la lógica)
-  scheduledTime   DateTime?         @map("scheduled_time") // opcional: si quieres hora específica
+  reservationDate String            @map("reservation_date") // solo la fecha (puedes cortar la hora en la lógica)
+  scheduledTime   String            @map("scheduled_time")
   status          ReservationStatus
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")

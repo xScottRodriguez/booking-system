@@ -20,6 +20,7 @@ export class WinstonLoggerService implements LoggerService {
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.json(),
+        this.formatPrinter(),
       ),
       transports: [
         // file on daily rotation (info only)
@@ -30,6 +31,7 @@ export class WinstonLoggerService implements LoggerService {
           format: winston.format.combine(
             winston.format.timestamp(),
             winston.format.json(),
+            this.formatPrinter(),
           ),
           datePattern: 'YYYY-MM-DD',
           zippedArchive: false,
@@ -45,6 +47,7 @@ export class WinstonLoggerService implements LoggerService {
           format: winston.format.combine(
             winston.format.timestamp(),
             winston.format.json(),
+            this.formatPrinter(),
           ),
           datePattern: 'YYYY-MM-DD',
           zippedArchive: false,
@@ -61,6 +64,7 @@ export class WinstonLoggerService implements LoggerService {
           format: winston.format.combine(
             winston.format.timestamp(),
             winston.format.json(),
+            this.formatPrinter(),
           ),
           datePattern: 'YYYY-MM-DD',
           zippedArchive: false,
@@ -74,6 +78,7 @@ export class WinstonLoggerService implements LoggerService {
           format: winston.format.combine(
             winston.format.timestamp(),
             winston.format.json(),
+            this.formatPrinter(),
           ),
           datePattern: 'YYYY-MM-DD',
           zippedArchive: true,
@@ -86,24 +91,27 @@ export class WinstonLoggerService implements LoggerService {
             winston.format.splat(),
             winston.format.timestamp(),
             winston.format.colorize(),
-            winston.format.printf(info => {
-              return `${info.timestamp} ${info.level}: ${info.message ?? ''}`;
-            }),
+            this.formatPrinter(),
           ),
         }),
       ],
     });
   }
 
-  log(message: string, ...meta: unknown[]): void {
+  log(message: string, meta: unknown): void {
     this.logger.info(message, meta);
   }
 
-  error(message: string, ...meta: unknown[]): void {
+  error(message: string, meta: unknown): void {
     this.logger.error(message, meta);
   }
 
-  warn(message: string, ...meta: unknown[]): void {
+  warn(message: string, meta: unknown): void {
     this.logger.warn(message, meta);
+  }
+  private formatPrinter(): winston.Logform.Format {
+    return winston.format.printf(({ level, message, timestamp, ...meta }) => {
+      return `${timestamp} ${level}: ${message} ${Object.keys(meta).length ? '|| ' + JSON.stringify(meta, null, 2) : ''}`;
+    });
   }
 }

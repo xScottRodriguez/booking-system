@@ -33,9 +33,7 @@ export class SchedulerService {
     });
 
     for (const reservation of reservations) {
-      const existingStart = DateTime.fromISO(
-        reservation.reservationDate.toISOString(),
-      );
+      const existingStart = DateTime.fromISO(reservation.reservationDate);
       const existingEnd = existingStart.plus({
         minutes: reservation.serviceType.unitsRequired * duration,
       });

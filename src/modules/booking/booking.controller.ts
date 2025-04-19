@@ -27,6 +27,7 @@ import { Roles } from '@root/src/common/enums';
 import { RoleAuthGuard } from '@root/src/common/guards';
 import { PaginationQueryDto } from '@root/src/common/interfaces';
 import { IPagination } from '@root/src/common/interfaces/pagination.interface';
+import { parsePagination } from '@root/src/common/utils';
 
 import {
   CreateBookingDto,
@@ -94,7 +95,8 @@ export class BookingController {
   findAll(
     @Query() pagination: PaginationQueryDto<FiltersDto>,
   ): Promise<IPagination<Reservation>> {
-    return this.bookingService.findAll(pagination);
+    const paginationParsed = parsePagination(pagination);
+    return this.bookingService.findAll(paginationParsed);
   }
 
   @ApiOkResponse({

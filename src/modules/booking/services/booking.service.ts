@@ -40,14 +40,20 @@ export class BookingService {
   async create(
     _createBookingDto: CreateBookingDto,
   ): Promise<DefultResponseDto<Reservation>> {
-    const { serviceTypeId, date, clientId } = _createBookingDto;
+    const { serviceTypeId, date, clientId, hour } = _createBookingDto;
 
     try {
       //checkReservationValid
       const [isReservationValid, isSlotAvaible] = await Promise.all([
-        this.checkReservationValid(date, serviceTypeId),
-        this.isTimeSlotAvailable(date, serviceTypeId),
+        this.checkReservationValid(date, serviceTypeId, hour),
+        this.isTimeSlotAvailable(date, serviceTypeId, hour),
       ]);
+      this._logger.log('se puede reservar?', {
+        service: BookingService.name,
+        method: 'create',
+        isReservationValid,
+        isSlotAvaible,
+      });
       if (!isReservationValid || !isSlotAvaible)
         throw new UnprocessableEntityException(
           this._responseHandler.error(
@@ -60,7 +66,8 @@ export class BookingService {
       //createa reservation.
       const data: Reservation = await this._reservationRepository.create({
         serviceTypeId,
-        date,
+        date: date,
+        hour: hour,
         clientId: clientId,
       });
       return this._responseHandler.sanitize(
@@ -72,6 +79,7 @@ export class BookingService {
       this._logger.error(error, {
         service: BookingService.name,
         method: 'create',
+        error,
       });
       if (error instanceof UnprocessableEntityException) throw error;
 
@@ -88,6 +96,7 @@ export class BookingService {
   async checkReservationValid(
     _date: string,
     serviceTypeId: number,
+    hour: string,
   ): Promise<boolean> {
     const [globalConfig, service] = await Promise.all([
       this._globalScheduleConfigRepository.getGlobalScheduleConfig(),
@@ -106,7 +115,7 @@ export class BookingService {
 
     //get reservations of the day joining the service type
     const reservations: ReservationsWithServices[] =
-      await this._reservationRepository.findOfTheDay(_date);
+      await this._reservationRepository.findOfTheDay(_date, hour);
 
     if (!reservations.length) return true;
 
@@ -115,21 +124,36 @@ export class BookingService {
       0,
     );
 
-    return this._dailyCapacityValidatorService.isReservationValid(
-      totalUnitsUsed,
-      service.unitsRequired,
-      globalConfig.defaultTotalUnits,
+    this._logger.warn(
+      'CASO DE USO: ESTA DISPONIBLE LA FECHA PERO NO EL TIPO DE CORTE POR PASAR EL LIMITE DE 5',
+      {
+        service: BookingService.name,
+        method: 'checkReservationValid',
+        totalUnitsUsed,
+        unitsRequired: service.unitsRequired,
+        globalConfigDefaultTotalUnits: globalConfig.defaultTotalUnits,
+      },
     );
+
+    const isValid: boolean =
+      this._dailyCapacityValidatorService.isReservationValid(
+        totalUnitsUsed,
+        service.unitsRequired,
+        globalConfig.defaultTotalUnits,
+      );
+
+    return isValid;
   }
 
   async isTimeSlotAvailable(
     IsoDate: string,
     serviceTypeId: number,
+    hour: string,
   ): Promise<boolean> {
     const [service, unitSetting, reservations] = await Promise.all([
       this._serviceTypeRepository.findById(serviceTypeId),
       this._unitSettingsRepository.getUnitSettingsById(),
-      this._reservationRepository.findOfTheDay(IsoDate),
+      this._reservationRepository.findOfTheDay(IsoDate, hour),
     ]);
 
     if (!service || !unitSetting)

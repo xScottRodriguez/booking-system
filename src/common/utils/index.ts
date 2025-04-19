@@ -2,6 +2,10 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 
 import Handlebars from 'handlebars';
+import { DateTime } from 'luxon';
+
+import { OrderType } from '../enums';
+import { PaginationQueryDto } from '../interfaces';
 type MessageObject = {
   [key: string]: string | MessageObject;
 };
@@ -44,6 +48,45 @@ async function compileTemplate(
   return compiled(data);
 }
 
+function parsePagination<T = unknown>(
+  query: PaginationQueryDto<T>,
+): PaginationQueryDto<T> {
+  const filters: Record<string, unknown> = {};
+
+  for (const key in query) {
+    const match = key.match(/^filters\[(.+?)]$/);
+    if (match) {
+      filters[match[1]] = query[key];
+    }
+  }
+
+  return {
+    page: query.page ? query.page : 1,
+    limit: query.limit ? query.limit : 25,
+    offset: query.offset ? query.offset : 0,
+    order: query.order ?? OrderType.ASC,
+    filters: filters as T,
+  };
+}
+
+function toUTCFromSV(dateStr: string, isEndOfDay = false): Date {
+  const local = DateTime.fromISO(dateStr, { zone: 'America/El_Salvador' });
+  const target = isEndOfDay ? local.endOf('day') : local.startOf('day');
+  return target.toUTC().toJSDate(); // convierte a Date en UTC
+}
+
+function toISOFromSV(dateStr: string, isEndOfDay = false): Date {
+  const local = DateTime.fromISO(dateStr, { zone: 'America/El_Salvador' });
+  const target = isEndOfDay ? local.endOf('day') : local.startOf('day');
+  return target.toJSDate(); // convierte a Date en UTC
+}
+
 export * from './page-builder';
 
-export { getMessage, compileTemplate };
+export {
+  getMessage,
+  compileTemplate,
+  parsePagination,
+  toUTCFromSV,
+  toISOFromSV,
+};

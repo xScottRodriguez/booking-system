@@ -22,7 +22,7 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
-      whitelist: true,
+      //whitelist: true,
       forbidNonWhitelisted: true,
       transformOptions: {
         enableImplicitConversion: true,

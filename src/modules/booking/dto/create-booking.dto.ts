@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import { IsISO8601, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, Matches } from 'class-validator';
 export class CreateBookingDto {
   @ApiProperty({
     example: 1,
@@ -20,10 +20,21 @@ export class CreateBookingDto {
   @IsNumber()
   clientId: number;
 
-  @IsOptional()
   @ApiProperty({
-    example: '2022-05-12T12:00:00',
+    example: '2022-05-12',
   })
-  @IsISO8601()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'date must be in format YYYY-MM-DD',
+  })
   date: string;
+
+  @ApiProperty({
+    example: '12:00:00',
+    description: 'Time in HH:mm:ss format',
+    type: 'string',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/)
+  hour: string;
 }

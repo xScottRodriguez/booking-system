@@ -44,11 +44,11 @@ export class PaginationQueryDto<Filter> {
   readonly page?: number = 1;
 
   @ApiPropertyOptional({
-    default: 'ASC',
+    default: 'desc',
   })
   @IsString()
   @IsOptional()
-  readonly order?: OrderType = OrderType.ASC;
+  readonly order?: OrderType = OrderType.DESC;
 
   @ApiPropertyOptional()
   @IsOptional({ each: true })
