@@ -37,12 +37,13 @@ export class ReservationRepository {
   }
 
   create(createBookingDto: CreateBookingDto): Promise<Reservation> {
-    const { serviceTypeId, date, clientId, hour } = createBookingDto;
+    const { serviceTypeId, date, client, clientPhone, hour } = createBookingDto;
 
     return this._prisma.reservation.create({
       data: {
         serviceTypeId: serviceTypeId,
-        clientId: clientId,
+        client: client,
+        clientPhone: clientPhone,
         status: ReservationStatus.confirmada,
         reservationDate: date,
         scheduledTime: hour,
@@ -60,12 +61,15 @@ export class ReservationRepository {
     if (filters?.fromDate && filters?.toDate) {
       where.reservationDate = {
         gte: filters.fromDate,
-        lt: filters.toDate,
+        lte: filters.toDate,
       };
     }
 
-    if (filters?.serviceTypeId) {
-      where.serviceTypeId = +filters.serviceTypeId;
+    if (filters?.serviceType) {
+      where.serviceType = {
+        name: filters?.serviceType,
+      };
+      // where.serviceTypeId = +filters.serviceTypeId;
     }
 
     if (filters?.status) {
@@ -75,8 +79,6 @@ export class ReservationRepository {
     if (filters?.clientId) {
       where.clientId = +filters.clientId;
     }
-
-    console.log({ where });
 
     return pageBuilder<
       Reservation,

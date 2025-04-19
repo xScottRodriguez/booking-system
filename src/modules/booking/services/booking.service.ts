@@ -40,7 +40,8 @@ export class BookingService {
   async create(
     _createBookingDto: CreateBookingDto,
   ): Promise<DefultResponseDto<Reservation>> {
-    const { serviceTypeId, date, clientId, hour } = _createBookingDto;
+    const { serviceTypeId, date, client, clientPhone, hour } =
+      _createBookingDto;
 
     try {
       //checkReservationValid
@@ -68,7 +69,8 @@ export class BookingService {
         serviceTypeId,
         date: date,
         hour: hour,
-        clientId: clientId,
+        client: client,
+        clientPhone: clientPhone,
       });
       return this._responseHandler.sanitize(
         data,

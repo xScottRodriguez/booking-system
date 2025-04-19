@@ -1,27 +1,33 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 import { ReservationStatus } from '@prisma/client';
-import { IsEnum, IsISO8601, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString, Matches } from 'class-validator';
 
 export class FiltersDto {
   @ApiPropertyOptional({
     description: 'Filter by date',
     type: 'string',
     format: 'date-time',
-    example: '2023-10-01T00:00:00Z',
+    example: '2023-10-01',
   })
   @IsOptional()
-  @IsISO8601()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'toDate must be in format YYYY-MM-DD',
+  })
   fromDate?: string;
 
   @ApiPropertyOptional({
     description: 'Filter by date',
     type: 'string',
     format: 'date-time',
-    example: '2023-10-01T00:00:00Z',
+    example: '2023-10-01',
   })
   @IsOptional()
-  @IsISO8601()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'toDate must be in format YYYY-MM-DD',
+  })
+  @IsString()
   toDate?: string;
 
   @ApiPropertyOptional({
@@ -31,7 +37,7 @@ export class FiltersDto {
   })
   @IsOptional()
   @IsString()
-  serviceTypeId?: string;
+  serviceType?: string;
 
   @ApiPropertyOptional({
     description: 'Filter by reservation status',
