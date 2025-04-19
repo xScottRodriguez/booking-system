@@ -76,8 +76,17 @@ export class ReservationRepository {
       where.status = filters.status;
     }
 
-    if (filters?.clientId) {
-      where.clientId = +filters.clientId;
+    if (filters?.client) {
+      where.client = {
+        contains: filters.client,
+        mode: 'insensitive',
+      };
+    }
+    if (filters?.clientPhone) {
+      where.clientPhone = {
+        contains: filters.clientPhone,
+        mode: 'insensitive',
+      };
     }
 
     return pageBuilder<
@@ -90,13 +99,6 @@ export class ReservationRepository {
       where,
       include: {
         serviceType: true,
-        client: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
-          },
-        },
       },
       limit,
       page,

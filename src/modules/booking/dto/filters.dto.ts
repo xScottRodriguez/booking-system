@@ -54,5 +54,9 @@ export class FiltersDto {
   })
   @IsOptional()
   @IsString()
-  clientId?: string;
+  client?: string;
+
+  @IsOptional()
+  @IsString()
+  clientPhone?: string;
 }
