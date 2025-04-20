@@ -1,0 +1,37 @@
+
+services:
+  api:
+    container_name: barbart-shop_service
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - '${PORT}:${PORT}'
+    environment:
+      - NODE_ENV=production
+      - PORT=${PORT}
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+      - JWT_ISSUER=${JWT_ISSUER}
+
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+
+      - API_BASE_URL=${API_BASE_URL}
+
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - RESEND_API_URL=${RESEND_API_URL}
+      - SENDER_MAIL=${SENDER_MAIL}
+      - APP_NAME=${APP_NAME}
+
+
+    restart: always
+    networks:
+      - invoices_electronic-invoice-n
+
+networks:
+  invoices_electronic-invoice-n:
+    driver: bridge

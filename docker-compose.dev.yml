@@ -1,0 +1,26 @@
+
+services:
+  api:
+    container_name: barber-shop_service
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: pnpm start:dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - '${PORT}:${PORT}'
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+    networks:
+      - electronic-invoice-n
+
+networks:
+  electronic-invoice-n:
+    driver: bridge
+
+    
+

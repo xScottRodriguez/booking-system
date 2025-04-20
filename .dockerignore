@@ -1,0 +1,38 @@
+# Dependencias locales
+node_modules
+
+# Archivos de salida de la compilación
+dist
+build
+
+# Logs
+*.log
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos del editor/IDE
+.vscode
+.idea
+
+# Variables de entorno
+.env
+.env.*.local
+
+# Archivos de Git
+.git
+.gitignore
+
+# Archivos de Docker
+.dockerignore
+Dockerfile*
+
+# Otros archivos temporales
+*.tsbuildinfo
+*.swp
+*.swo
+
