@@ -1,7 +1,8 @@
-import { IsNotEmpty, IsNumber } from 'class-validator';
+import { ReservationStatus } from '@prisma/client';
+import { IsEnum, IsNotEmpty } from 'class-validator';
 
 export class UpdateStateBookingDto {
   @IsNotEmpty()
-  @IsNumber()
-  stateId: number;
+  @IsEnum(ReservationStatus)
+  stateId: ReservationStatus;
 }

@@ -5,7 +5,6 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   Query,
   UseGuards,
   ClassSerializerInterceptor,
@@ -14,6 +13,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiInternalServerErrorResponse,
@@ -29,12 +29,7 @@ import { PaginationQueryDto } from '@root/src/common/interfaces';
 import { IPagination } from '@root/src/common/interfaces/pagination.interface';
 import { parsePagination } from '@root/src/common/utils';
 
-import {
-  CreateBookingDto,
-  FiltersDto,
-  UpdateBookingDto,
-  UpdateStateBookingDto,
-} from './dto';
+import { CreateBookingDto, FiltersDto, UpdateStateBookingDto } from './dto';
 import { BookingService } from './services';
 
 @ApiTags('Bookings')
@@ -90,7 +85,10 @@ export class BookingController {
       },
     },
   })
-  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
+  @UseGuards(
+    AuthGuard('jwt'),
+    new RoleAuthGuard(Roles.ADMIN, Roles.AUTHENTICATED),
+  )
   @Get()
   findAll(
     @Query() pagination: PaginationQueryDto<FiltersDto>,
@@ -111,41 +109,26 @@ export class BookingController {
       },
     },
   })
-  @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateBookingDto: UpdateBookingDto,
-  ): Promise<void> {
-    return this.bookingService.update(+id, updateBookingDto);
-  }
-
-  @Patch('/:id/update-states')
-  updateStateBooking(
-    @Param('id') id: string,
-    @Body() updateStateBookingDto: UpdateStateBookingDto,
-  ): Promise<void> {
-    return this.bookingService.updateStateBooking(
-      +id,
-      updateStateBookingDto.stateId,
-    );
-  }
-
-  @ApiOkResponse({
-    description: 'Delete Booking',
-  })
-  @ApiInternalServerErrorResponse({
+  @ApiConflictResponse({
     schema: {
       example: {
-        statusCode: 500,
-        message: 'Error trying delete booking',
-        error: 'InternalServerError',
+        statusCode: 409,
+        message:
+          'A reservation already exists for the time you are trying to book',
+        error: 'ConflicException',
       },
     },
   })
+  @ApiBody({
+    type: UpdateStateBookingDto,
+    description: 'Update booking status',
+  })
   @UseGuards(AuthGuard('jwt'), new RoleAuthGuard('ADMIN', 'AUTHENTICATED'))
-  @Delete(':id')
-  remove(@Param('id') id: string): Promise<void> {
-    return this.bookingService.remove(+id);
+  @Patch('/:id/change-status')
+  updateStateBooking(
+    @Param('id') id: string,
+    @Body() updateStateBookingDto: UpdateStateBookingDto,
+  ): Promise<Reservation> {
+    return this.bookingService.changeStatus(+id, updateStateBookingDto.stateId);
   }
 }

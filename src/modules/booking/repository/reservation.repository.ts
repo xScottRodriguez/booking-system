@@ -107,4 +107,18 @@ export class ReservationRepository {
       },
     });
   }
+
+  changeStatus(
+    reservationId: number,
+    statusId: ReservationStatus,
+  ): Promise<Reservation> {
+    return this._prisma.reservation.update({
+      where: {
+        id: reservationId,
+      },
+      data: {
+        status: statusId,
+      },
+    });
+  }
 }

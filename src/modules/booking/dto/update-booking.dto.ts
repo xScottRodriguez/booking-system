@@ -1,10 +1,14 @@
-import { ApiProperty, PartialType } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
+
+import { ReservationStatus } from '@prisma/client';
+import { IsEnum } from 'class-validator';
 
 import { CreateBookingDto } from './create-booking.dto';
 
-export class UpdateBookingDto extends PartialType(CreateBookingDto) {
+export class UpdateBookingDto extends CreateBookingDto {
   @ApiProperty({
     example: 1,
   })
-  stateId: number;
+  @IsEnum(ReservationStatus)
+  stateId?: ReservationStatus;
 }

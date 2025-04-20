@@ -10,14 +10,32 @@ import { CreateAuthDto } from '../dto';
 export class UserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(createUser: CreateAuthDto, role: number): Promise<users> {
+  create(
+    createUser: CreateAuthDto | Partial<CreateAuthDto>,
+    role: number,
+    isGoogle = false,
+  ): Promise<users> {
+    if (!isGoogle) {
+      return this.prisma.users.create({
+        data: {
+          username: createUser.username,
+          email: createUser.email,
+          activationToken: randomUUID(),
+          password: createUser.password,
+          roleId: role,
+        },
+      });
+    }
+
     return this.prisma.users.create({
       data: {
         username: createUser.username,
         email: createUser.email,
-        activationToken: randomUUID(),
-        password: createUser.password,
+        activationToken: null,
+        password: null,
         roleId: role,
+        isGoogleAccount: true,
+        isActive: true,
       },
     });
   }

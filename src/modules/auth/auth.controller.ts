@@ -35,7 +35,6 @@ import { Request } from 'express';
 
 import { AuthService } from './auth.service';
 import { GetUser } from './decorators/get-user.decorator';
-import { CreateGoogleDto } from './dto';
 import { ActivateUserDto } from './dto/activate-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateAuthDto } from './dto/create-auth.dto';
@@ -191,52 +190,16 @@ export class AuthController {
   @Get('/google/callback')
   @UseGuards(AuthGuard('google'))
   async googleSignIn(@Req() req: Request): Promise<
-    | {
-        user: CreateGoogleDto;
-        jwt: string;
-      }
-    | {
-        user: Omit<users, 'password'>;
-        jwt: {
-          accessToken: string;
-        };
-      }
+    DefultResponseDto<{
+      user: UserSerialized;
+      jwt: {
+        accessToken: string;
+      };
+    }>
   > {
     return await this.authService.prepareUserRegister(req);
   }
-  @ApiOkResponse({
-    schema: {
-      example: {
-        user: {
-          id: 1,
-          username: 'JohnDoe',
-          email: 'johndoe@example.com',
-          isActive: true,
-          isGoogleAccount: true,
-        },
-        jwt: {
-          accessToken: 'example',
-        },
-      },
-    },
-    description: 'Login with google',
-  })
-  @Get('/google-accesses')
-  googleAccess(@Query() params: { access_token: string }): Promise<
-    | {
-        user: Omit<users, 'password'>;
-        jwt: {
-          accessToken: string;
-        };
-      }
-    | {
-        user: CreateGoogleDto;
-        jwt: string;
-      }
-  > {
-    const { access_token } = params;
-    return this.authService.prepareLoginGoogle(access_token);
-  }
+
   @ApiOkResponse()
   @ApiInternalServerErrorResponse({
     schema: {

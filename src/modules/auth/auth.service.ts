@@ -1,4 +1,3 @@
-import { HttpService } from '@nestjs/axios';
 import {
   BadRequestException,
   ConflictException,
@@ -14,15 +13,13 @@ import { randomUUID } from 'crypto';
 
 import { roles, users } from '@prisma/client';
 import { DefultResponseDto } from '@root/src/common/dto';
-import { IGoogleAccount } from '@root/src/common/interfaces';
 import {
   ResponseService,
   WinstonLoggerService,
 } from '@root/src/common/services';
 import { UserSerialized } from '@root/src/common/types';
-import { AxiosError, HttpStatusCode } from 'axios';
+import { HttpStatusCode } from 'axios';
 import { Request } from 'express';
-import { catchError, firstValueFrom } from 'rxjs';
 
 import { ActivateUserDto } from './dto/activate-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -49,7 +46,6 @@ export class AuthService {
 
     private mailService: MailService,
 
-    private readonly httpService: HttpService,
     private readonly _logger: WinstonLoggerService,
 
     private readonly _responseHandler: ResponseService,
@@ -354,16 +350,12 @@ export class AuthService {
   }
 
   async prepareUserRegister(req: Request): Promise<
-    | {
-        user: CreateGoogleDto;
-        jwt: string;
-      }
-    | {
-        user: Omit<users, 'password'>;
-        jwt: {
-          accessToken: string;
-        };
-      }
+    DefultResponseDto<{
+      user: UserSerialized;
+      jwt: {
+        accessToken: string;
+      };
+    }>
   > {
     if (!req.user)
       throw new NotFoundException(
@@ -384,12 +376,14 @@ export class AuthService {
     return this.loginWithGoogle(userExist);
   }
 
-  async loginWithGoogle(loginAuthDto: users): Promise<{
-    user: Omit<users, 'password'>;
-    jwt: {
-      accessToken: string;
-    };
-  }> {
+  async loginWithGoogle(loginAuthDto: users): Promise<
+    DefultResponseDto<{
+      user: UserSerialized;
+      jwt: {
+        accessToken: string;
+      };
+    }>
+  > {
     if (!loginAuthDto.isGoogleAccount)
       throw new ConflictException(
         this._responseHandler.error(
@@ -399,19 +393,22 @@ export class AuthService {
         ),
       );
 
-    const { id, email, isActive, roleId } = loginAuthDto;
     const payload: JwtPayload = {
-      id,
-      email,
-      isActive,
-      role: roleId,
+      id: loginAuthDto.id,
+      email: loginAuthDto.email,
+      isActive: loginAuthDto.isActive,
+      role: loginAuthDto.roleId,
     };
     try {
       const { password: _password, ...userWithoutPassword } = loginAuthDto;
-      return {
-        user: userWithoutPassword,
-        jwt: { accessToken: this.jwtService.sign(payload) },
-      };
+      return this._responseHandler.sanitize(
+        {
+          user: userWithoutPassword,
+          jwt: { accessToken: this.jwtService.sign(payload) },
+        },
+        ['Login Success'],
+        HttpStatusCode.Ok,
+      );
     } catch (error) {
       this._logger.error(error.message, {
         stack: error.stack,
@@ -427,73 +424,40 @@ export class AuthService {
     }
   }
 
-  async prepareLoginGoogle(accessToken: string): Promise<
-    | {
-        user: Omit<users, 'password'>;
-        jwt: {
-          accessToken: string;
-        };
-      }
-    | {
-        user: CreateGoogleDto;
-        jwt: string;
-      }
+  async registerUserWithGoogle(user: CreateGoogleDto): Promise<
+    DefultResponseDto<{
+      user: UserSerialized;
+      jwt: {
+        accessToken: string;
+      };
+    }>
   > {
-    const { data } = await firstValueFrom(
-      this.httpService
-        .get<IGoogleAccount>(`https://www.googleapis.com/oauth2/v3/userinfo`, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        })
-        .pipe(
-          catchError((error: AxiosError) => {
-            this._logger.error('Error interno', {
-              stack: error.stack,
-              error: error,
-              context: AuthService.name,
-            });
-            throw new Error('An error happened!');
-          }),
-        ),
-    );
-    const userExist: users = await this.userRepository.findByEmail(data.email);
-    const user = {
-      username: data.name,
-      email: data.email,
-    };
-
-    if (!userExist) return this.registerUserWithGoogle(user);
-
-    return this.loginWithGoogle(userExist);
-  }
-
-  async registerUserWithGoogle(user: CreateGoogleDto): Promise<{
-    user: CreateGoogleDto;
-    jwt: string;
-  }> {
     const userRole: roles = await this.roleRepository.getDefaultRole();
-    const values = {
-      ...user,
-      isGoogleAccount: true,
-      isActive: true,
+    const values: Partial<CreateAuthDto> = {
+      email: user.email,
+      username: user.username,
     };
 
     try {
-      const { id, email, isActive, roleId } = await this.userRepository.create(
+      const userCreated: users = await this.userRepository.create(
         values,
         userRole.id,
+        true,
       );
       const payload: JwtPayload = {
-        id,
-        email,
-        isActive,
-        role: roleId,
+        id: userCreated.id,
+        email: userCreated.email,
+        isActive: userCreated.isActive,
+        role: userCreated.roleId,
       };
 
       const accessToken = this.jwtService.sign(payload);
 
-      return { user, jwt: accessToken };
+      return this._responseHandler.sanitize(
+        { user: userCreated, jwt: { accessToken: accessToken } },
+        ['User Created'],
+        HttpStatusCode.Created,
+      );
     } catch (error) {
       if (error.code === '23505')
         throw new ConflictException(
