@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 
 import { envs } from './common/config';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { ServicesModule } from './modules/services/services.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { BookingModule } from '@/modules/booking/booking.module';
 import { MailModule } from '@/modules/mail/mail.module';
@@ -30,6 +31,7 @@ import { StatusModule } from '@/modules/status/status.module';
     RoleModule,
     StatusModule,
     PrismaModule,
+    ServicesModule,
   ],
   providers: [],
 })
