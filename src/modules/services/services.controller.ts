@@ -7,15 +7,27 @@ import {
   Param,
   Delete,
   Query,
+  ClassSerializerInterceptor,
+  UseInterceptors,
+  UseGuards,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+import { Roles } from '@root/src/common/enums';
+import { RoleAuthGuard } from '@root/src/common/guards';
 import { PaginationQueryDto } from '@root/src/common/interfaces';
 import { IPagination } from '@root/src/common/interfaces/pagination.interface';
 
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { ServicesService } from './services.service';
-
+@ApiBearerAuth('access-token')
+@UseInterceptors(ClassSerializerInterceptor)
+@UseGuards(
+  AuthGuard('jwt'),
+  new RoleAuthGuard(Roles.ADMIN, Roles.AUTHENTICATED),
+)
 @Controller('services')
 export class ServicesController {
   constructor(private readonly servicesService: ServicesService) {}

@@ -8,7 +8,6 @@ import {
   Query,
   UseGuards,
   UseInterceptors,
-  Req,
   Param,
   Render,
 } from '@nestjs/common';
@@ -31,10 +30,10 @@ import { Roles } from '@root/src/common/enums';
 import { RoleAuthGuard } from '@root/src/common/guards';
 import { UserSerialized } from '@root/src/common/types';
 import { validate } from 'class-validator';
-import { Request } from 'express';
 
 import { AuthService } from './auth.service';
 import { GetUser } from './decorators/get-user.decorator';
+import { CreateGoogleDto } from './dto';
 import { ActivateUserDto } from './dto/activate-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateAuthDto } from './dto/create-auth.dto';
@@ -149,47 +148,59 @@ export class AuthController {
   > {
     return this.authService.login(loginAuthDto);
   }
+  //
+  // @ApiOkResponse({
+  //   schema: {
+  //     example: {
+  //       user: {
+  //         id: 1,
+  //         username: 'JohnDoe',
+  //         email: 'johndoe@example.com',
+  //         isActive: true,
+  //         isGoogleAccount: false,
+  //       },
+  //       jwt: {
+  //         accessToken: 'example',
+  //       },
+  //     },
+  //   },
+  //   description: 'Login with google',
+  // })
+  // @ApiUnauthorizedResponse({
+  //   schema: {
+  //     example: {
+  //       statusCode: 401,
+  //       message: 'This email is already registered with google account',
+  //       error: 'Unauthorized exception',
+  //     },
+  //   },
+  //   description: 'Unauthorized Exception',
+  // })
+  // @ApiInternalServerErrorResponse({
+  //   schema: {
+  //     example: {
+  //       statusCode: 500,
+  //       message: 'Error trying to sign in',
+  //       error: 'Internal Server Error',
+  //     },
+  //   },
+  //   description: 'Internal Server Error',
+  // })
+  // @Get('/google/callback')
+  // @UseGuards(AuthGuard('google'))
+  // async googleSignIn(@Req() req: Request): Promise<
+  //   DefultResponseDto<{
+  //     user: UserSerialized;
+  //     jwt: {
+  //       accessToken: string;
+  //     };
+  //   }>
+  // > {
+  //   return await this.authService.prepareUserRegister(req);
+  // }
 
-  @ApiOkResponse({
-    schema: {
-      example: {
-        user: {
-          id: 1,
-          username: 'JohnDoe',
-          email: 'johndoe@example.com',
-          isActive: true,
-          isGoogleAccount: false,
-        },
-        jwt: {
-          accessToken: 'example',
-        },
-      },
-    },
-    description: 'Login with google',
-  })
-  @ApiUnauthorizedResponse({
-    schema: {
-      example: {
-        statusCode: 401,
-        message: 'This email is already registered with google account',
-        error: 'Unauthorized exception',
-      },
-    },
-    description: 'Unauthorized Exception',
-  })
-  @ApiInternalServerErrorResponse({
-    schema: {
-      example: {
-        statusCode: 500,
-        message: 'Error trying to sign in',
-        error: 'Internal Server Error',
-      },
-    },
-    description: 'Internal Server Error',
-  })
-  @Get('/google/callback')
-  @UseGuards(AuthGuard('google'))
-  async googleSignIn(@Req() req: Request): Promise<
+  @Post('/google')
+  loginWithGoogle(@Body() user: CreateGoogleDto): Promise<
     DefultResponseDto<{
       user: UserSerialized;
       jwt: {
@@ -197,7 +208,7 @@ export class AuthController {
       };
     }>
   > {
-    return await this.authService.prepareUserRegister(req);
+    return this.authService.prepareUserRegister(user);
   }
 
   @ApiOkResponse()

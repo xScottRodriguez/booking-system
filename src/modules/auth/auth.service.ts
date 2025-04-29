@@ -19,7 +19,6 @@ import {
 } from '@root/src/common/services';
 import { UserSerialized } from '@root/src/common/types';
 import { HttpStatusCode } from 'axios';
-import { Request } from 'express';
 
 import { ActivateUserDto } from './dto/activate-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -349,7 +348,7 @@ export class AuthService {
     });
   }
 
-  async prepareUserRegister(req: Request): Promise<
+  async prepareUserRegister(user: CreateGoogleDto): Promise<
     DefultResponseDto<{
       user: UserSerialized;
       jwt: {
@@ -357,21 +356,15 @@ export class AuthService {
       };
     }>
   > {
-    if (!req.user)
-      throw new NotFoundException(
+    const userExist: users = await this.userRepository.findByEmail(user.email);
+    if (!userExist)
+      throw new UnprocessableEntityException(
         this._responseHandler.error(
           ['Error'],
-          HttpStatusCode.NotFound,
-          'User not found',
+          HttpStatusCode.UnprocessableEntity,
+          'This action can not be done',
         ),
       );
-
-    const user = {
-      username: `${req.user?.['firstName']} ${req.user?.['lastName']}`,
-      email: req.user?.['email'],
-    };
-    const userExist: users = await this.userRepository.findByEmail(user.email);
-    if (!userExist) return this.registerUserWithGoogle(user);
 
     return this.loginWithGoogle(userExist);
   }
@@ -384,14 +377,9 @@ export class AuthService {
       };
     }>
   > {
-    if (!loginAuthDto.isGoogleAccount)
-      throw new ConflictException(
-        this._responseHandler.error(
-          ['Error'],
-          HttpStatusCode.Conflict,
-          'This email is already registered with a local account',
-        ),
-      );
+    if (!loginAuthDto.isGoogleAccount) {
+      return this.registerUserWithGoogle(loginAuthDto);
+    }
 
     const payload: JwtPayload = {
       id: loginAuthDto.id,
