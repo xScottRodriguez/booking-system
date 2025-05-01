@@ -12,6 +12,7 @@ import {
   ResponseService,
   WinstonLoggerService,
 } from '@root/src/common/services';
+import { getHours, minutesToTime, timeToMinutes } from '@root/src/common/utils';
 import { HttpStatusCode } from 'axios';
 
 import { DailyCapacityValidatorService } from './daily-capacity-validator.service';
@@ -23,7 +24,8 @@ import {
 } from '../repository/';
 import { ReservationsWithServices } from '../types';
 import { SchedulerService } from './scheduler.service';
-import { CreateBookingDto, FiltersDto } from '../dto';
+import { CreateBookingDto, FiltersDto, AvailableSlotsDto } from '../dto';
+import { IAvaiableSlots } from '../interfaces/bookingNotifications.interface';
 
 @Injectable()
 export class BookingService {
@@ -185,5 +187,111 @@ export class BookingService {
     statusId: ReservationStatus,
   ): Promise<Reservation> {
     return this._reservationRepository.changeStatus(reservationId, statusId);
+  }
+
+  async getAvaiableSlots(
+    avaiableSlotsDto: AvailableSlotsDto,
+  ): Promise<DefultResponseDto<IAvaiableSlots>> {
+    const serviceDuration = await this.getServiceDuration(
+      avaiableSlotsDto.serviceId,
+    );
+    const durationDefault = await this.getUnitSetting();
+    const reservations = await this.getReservations(avaiableSlotsDto.date);
+
+    const usedHours = this.getHours(reservations);
+    const normalizedUsedHours = usedHours.map(hour => hour.slice(0, 5));
+    const available = this.computeAvailableSlots(
+      normalizedUsedHours,
+      durationDefault,
+      serviceDuration,
+    );
+
+    const response: IAvaiableSlots = {
+      date: avaiableSlotsDto.date,
+      available: available,
+      blocked: usedHours,
+      duration: serviceDuration,
+    };
+
+    return this._responseHandler.sanitize(
+      response,
+      ['Slots disponibles'],
+      HttpStatusCode.Ok,
+    );
+  }
+
+  private async getServiceDuration(serviceId: number): Promise<number> {
+    const service = await this._serviceTypeRepository.findById(serviceId);
+    if (!service) {
+      throw new UnprocessableEntityException(
+        this._responseHandler.error(
+          undefined,
+          HttpStatusCode.UnprocessableEntity,
+          'Service not found',
+        ),
+      );
+    }
+    const unitSetting =
+      await this._unitSettingsRepository.getUnitSettingsById();
+    return unitSetting.unitDurationMinutes * service.unitsRequired;
+  }
+  private async getUnitSetting(): Promise<number> {
+    const unitSetting =
+      await this._unitSettingsRepository.getUnitSettingsById();
+    if (!unitSetting) {
+      throw new UnprocessableEntityException(
+        this._responseHandler.error(
+          undefined,
+          HttpStatusCode.UnprocessableEntity,
+          'Unit setting not found',
+        ),
+      );
+    }
+    return unitSetting.unitDurationMinutes;
+  }
+
+  private async getReservations(date: string): Promise<Reservation[]> {
+    return this._reservationRepository.findOfTheDay(date);
+  }
+
+  private getHours(reservations: Reservation[]): string[] {
+    return getHours(reservations);
+  }
+
+  private computeAvailableSlots(
+    usedHours: string[],
+    duration: number,
+    totalServiceDuration: number,
+  ): string[] {
+    const startTimeMinutes = 7 * 60;
+    const endTimeMinutes = 18 * 60;
+    const unitDuration = duration; // fallback defensivo
+    const requiredSlots = totalServiceDuration / unitDuration;
+
+    const allSlots: string[] = [];
+    for (
+      let i = startTimeMinutes;
+      i + totalServiceDuration <= endTimeMinutes;
+      i += unitDuration
+    ) {
+      allSlots.push(minutesToTime(i));
+    }
+
+    const available: string[] = [];
+
+    for (const slot of allSlots) {
+      const start = timeToMinutes(slot);
+
+      const slotSequence = Array.from({ length: requiredSlots }, (_, i) =>
+        minutesToTime(start + i * unitDuration),
+      );
+
+      const isBlocked = slotSequence.some(time => usedHours.includes(time));
+      if (!isBlocked) {
+        available.push(slot);
+      }
+    }
+
+    return available;
   }
 }

@@ -11,3 +11,10 @@ export interface IPayloadNotification {
   body: string;
   token: string;
 }
+
+export interface IAvaiableSlots {
+  date: string;
+  available: string[];
+  blocked: string[];
+  duration: number;
+}

@@ -17,14 +17,20 @@ export class ReservationRepository {
   constructor(private readonly _prisma: PrismaService) {}
   findOfTheDay(
     date: string,
-    hour: string,
+    hour?: string,
   ): Promise<ReservationsWithServices[]> {
     const reservationDate = DateTime.fromISO(date).toFormat('yyyy-MM-dd');
+
+    const where: Prisma.ReservationWhereInput = {
+      reservationDate: reservationDate,
+    };
+
+    if (hour) {
+      where.scheduledTime = hour;
+    }
+
     return this._prisma.reservation.findMany({
-      where: {
-        reservationDate: reservationDate,
-        scheduledTime: hour,
-      },
+      where: where,
       include: {
         serviceType: {
           select: {

@@ -82,7 +82,8 @@ function toISOFromSV(dateStr: string, isEndOfDay = false): Date {
 }
 
 export * from './page-builder';
-
+export * from './get-hours';
+export * from './time';
 export {
   getMessage,
   compileTemplate,

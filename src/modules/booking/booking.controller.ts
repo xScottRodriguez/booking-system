@@ -30,6 +30,8 @@ import { IPagination } from '@root/src/common/interfaces/pagination.interface';
 import { parsePagination } from '@root/src/common/utils';
 
 import { CreateBookingDto, FiltersDto, UpdateStateBookingDto } from './dto';
+import { AvailableSlotsDto } from './dto/avaiable-slots.dto';
+import { IAvaiableSlots } from './interfaces/bookingNotifications.interface';
 import { BookingService } from './services';
 
 @ApiTags('Bookings')
@@ -130,5 +132,38 @@ export class BookingController {
     @Body() updateStateBookingDto: UpdateStateBookingDto,
   ): Promise<Reservation> {
     return this.bookingService.changeStatus(+id, updateStateBookingDto.stateId);
+  }
+
+  @ApiOkResponse({
+    description: 'Get available slots',
+  })
+  @ApiInternalServerErrorResponse({
+    schema: {
+      example: {
+        statusCode: 500,
+        message: 'Error trying find available slots',
+        error: 'InternalServerError',
+      },
+    },
+  })
+  @ApiConflictResponse({
+    schema: {
+      example: {
+        statusCode: 409,
+        message:
+          'A reservation already exists for the time you are trying to book',
+        error: 'ConflicException',
+      },
+    },
+  })
+  @UseGuards(
+    AuthGuard('jwt'),
+    new RoleAuthGuard(Roles.ADMIN, Roles.AUTHENTICATED),
+  )
+  @Get('available-slots')
+  avaiableSlots(
+    @Query() avaiableSlotsDto: AvailableSlotsDto,
+  ): Promise<DefultResponseDto<IAvaiableSlots>> {
+    return this.bookingService.getAvaiableSlots(avaiableSlotsDto);
   }
 }
