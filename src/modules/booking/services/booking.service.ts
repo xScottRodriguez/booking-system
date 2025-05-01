@@ -209,7 +209,7 @@ export class BookingService {
     const response: IAvaiableSlots = {
       date: avaiableSlotsDto.date,
       available: available,
-      blocked: usedHours,
+      blocked: normalizedUsedHours,
       duration: serviceDuration,
     };
 
