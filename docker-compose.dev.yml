@@ -7,8 +7,9 @@ services:
       dockerfile: Dockerfile.dev
     command: pnpm start:dev
     volumes:
-      - .:/app
-      - /app/node_modules
+      - ./:/usr/src/app
+      - /usr/src/app/node_modules
+      - ./prisma/:/usr/src/app/prisma
     ports:
       - '${PORT}:${PORT}'
     env_file:

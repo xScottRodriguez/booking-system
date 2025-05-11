@@ -356,12 +356,28 @@ export class AuthService {
       };
     }>
   > {
-    const userExist: users = await this.userRepository.findByEmail(user.email);
-    if (!userExist) {
-      return this.registerUserWithGoogle(user);
-    }
+    try {
+      const userExist: users = await this.userRepository.findByEmail(
+        user.email,
+      );
+      if (!userExist) {
+        return this.registerUserWithGoogle(user);
+      }
 
-    return this.loginWithGoogle(userExist);
+      return this.loginWithGoogle(userExist);
+    } catch (error) {
+      this._logger.error(error.message, {
+        stack: error.stack,
+        context: AuthService.name,
+      });
+      throw new InternalServerErrorException(
+        this._responseHandler.error(
+          ['Error'],
+          HttpStatusCode.InternalServerError,
+          'Error trying to register user',
+        ),
+      );
+    }
   }
 
   async loginWithGoogle(loginAuthDto: users): Promise<
@@ -373,7 +389,7 @@ export class AuthService {
     }>
   > {
     if (!loginAuthDto.isGoogleAccount) {
-      return this.registerUserWithGoogle(loginAuthDto);
+      await this.activateUserWithGoogle(loginAuthDto.email);
     }
 
     const payload: JwtPayload = {
@@ -383,29 +399,15 @@ export class AuthService {
       role: loginAuthDto.roleId,
       isGoogleAccount: loginAuthDto.isGoogleAccount,
     };
-    try {
-      const { password: _password, ...userWithoutPassword } = loginAuthDto;
-      return this._responseHandler.sanitize(
-        {
-          user: userWithoutPassword,
-          jwt: { accessToken: this.jwtService.sign(payload) },
-        },
-        ['Login Success'],
-        HttpStatusCode.Ok,
-      );
-    } catch (error) {
-      this._logger.error(error.message, {
-        stack: error.stack,
-        context: AuthService.name,
-      });
-      throw new InternalServerErrorException(
-        this._responseHandler.error(
-          ['Error'],
-          HttpStatusCode.InternalServerError,
-          'Error trying sign in',
-        ),
-      );
-    }
+    const { password: _password, ...userWithoutPassword } = loginAuthDto;
+    return this._responseHandler.sanitize(
+      {
+        user: userWithoutPassword,
+        jwt: { accessToken: this.jwtService.sign(payload) },
+      },
+      ['Login Success'],
+      HttpStatusCode.Ok,
+    );
   }
 
   async registerUserWithGoogle(user: CreateGoogleDto): Promise<
@@ -416,54 +418,31 @@ export class AuthService {
       };
     }>
   > {
-    try {
-      const role = await this.roleRepository.getDefaultRole();
-      const userCreated = await this.userRepository.create(
-        {
-          email: user.email,
-          username: user.username,
-        },
-        role.id,
-      );
+    const role = await this.roleRepository.getDefaultRole();
+    const userCreated = await this.userRepository.create(
+      {
+        email: user.email,
+        username: user.username,
+      },
+      role.id,
+      true,
+    );
 
-      const payload: JwtPayload = {
-        id: userCreated.id,
-        email: userCreated.email,
-        isActive: userCreated.isActive,
-        isGoogleAccount: userCreated.isGoogleAccount,
-        role: userCreated.roleId,
-      };
+    const payload: JwtPayload = {
+      id: userCreated.id,
+      email: userCreated.email,
+      isActive: userCreated.isActive,
+      isGoogleAccount: userCreated.isGoogleAccount,
+      role: userCreated.roleId,
+    };
 
-      const accessToken = this.jwtService.sign(payload);
+    const accessToken = this.jwtService.sign(payload);
 
-      return this._responseHandler.sanitize(
-        { user: userCreated, jwt: { accessToken: accessToken } },
-        ['User Created'],
-        HttpStatusCode.Created,
-      );
-    } catch (error) {
-      if (error.code === '23505')
-        throw new ConflictException(
-          this._responseHandler.error(
-            ['Error'],
-            HttpStatusCode.Conflict,
-            'This email is already registered',
-          ),
-        );
-
-      this._logger.error(error.message, {
-        stack: error.stack,
-        context: AuthService.name,
-      });
-
-      throw new InternalServerErrorException(
-        this._responseHandler.error(
-          ['Error'],
-          HttpStatusCode.InternalServerError,
-          'Error creating user',
-        ),
-      );
-    }
+    return this._responseHandler.sanitize(
+      { user: userCreated, jwt: { accessToken: accessToken } },
+      ['User Created'],
+      HttpStatusCode.Created,
+    );
   }
 
   async getProfile(user: users): Promise<UserSerialized> {
