@@ -103,6 +103,11 @@ export class BookingService {
       this._serviceTypeRepository.findById(serviceTypeId),
     ]);
 
+    this._logger.log('', {
+      globalConfig,
+      service,
+    });
+
     if (!globalConfig || !service) {
       throw new UnprocessableEntityException(
         this._responseHandler.error(
@@ -190,44 +195,51 @@ export class BookingService {
   async getAvaiableSlots(
     avaiableSlotsDto: AvailableSlotsDto,
   ): Promise<DefultResponseDto<IAvaiableSlots>> {
-    const serviceDuration = await this.getServiceDuration(
-      avaiableSlotsDto.serviceId,
-    );
-    const durationDefault = await this.getUnitSetting();
-    const reservations = await this.getReservations(avaiableSlotsDto.date);
+    try {
+      const serviceDuration = await this.getServiceDuration(
+        avaiableSlotsDto.serviceId,
+      );
+      const durationDefault = await this.getUnitSetting();
+      const reservations = await this.getReservations(avaiableSlotsDto.date);
 
-    const usedHours = this.getHours(reservations);
-    const normalizedUsedHours = usedHours.map(hour => hour.slice(0, 5));
-    const available = this.computeAvailableSlots(
-      normalizedUsedHours,
-      durationDefault,
-      serviceDuration,
-    );
+      const usedHours = this.getHours(reservations);
+      const normalizedUsedHours = usedHours.map(hour => hour.slice(0, 5));
+      const available = this.computeAvailableSlots(
+        normalizedUsedHours,
+        durationDefault,
+        serviceDuration,
+      );
 
-    const response: IAvaiableSlots = {
-      date: avaiableSlotsDto.date,
-      available: available,
-      blocked: normalizedUsedHours,
-      duration: serviceDuration,
-    };
+      const response: IAvaiableSlots = {
+        date: avaiableSlotsDto.date,
+        available: available,
+        blocked: normalizedUsedHours,
+        duration: serviceDuration,
+      };
 
-    return this._responseHandler.sanitize(
-      response,
-      ['Slots disponibles'],
-      HttpStatusCode.Ok,
-    );
+      return this._responseHandler.sanitize(
+        response,
+        ['Slots disponibles'],
+        HttpStatusCode.Ok,
+      );
+    } catch (error) {
+      this._logger.error(error.message, {
+        service: BookingService.name,
+        method: 'getAvaiableSlots',
+        error: {
+          message: error.message,
+          stack: error.stack,
+        },
+      });
+      throw error;
+    }
   }
 
   private async getServiceDuration(serviceId: number): Promise<number> {
     const service = await this._serviceTypeRepository.findById(serviceId);
+    console.log({ service });
     if (!service) {
-      throw new UnprocessableEntityException(
-        this._responseHandler.error(
-          undefined,
-          HttpStatusCode.UnprocessableEntity,
-          'Service not found',
-        ),
-      );
+      return 0;
     }
     const unitSetting =
       await this._unitSettingsRepository.getUnitSettingsById();
