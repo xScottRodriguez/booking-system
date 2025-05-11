@@ -100,6 +100,16 @@ export class UserRepository {
     });
   }
 
+  activeGoogleAccount(email: string): Promise<users> {
+    return this.prisma.users.update({
+      where: {
+        email,
+      },
+      data: {
+        isGoogleAccount: true,
+      },
+    });
+  }
   // subscribeUserToNotification(token: string, userId: number) {
   //   return this.prisma.users.update({
   //     where: {

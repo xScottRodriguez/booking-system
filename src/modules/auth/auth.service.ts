@@ -11,7 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 
 import { randomUUID } from 'crypto';
 
-import { roles, users } from '@prisma/client';
+import { users } from '@prisma/client';
 import { DefultResponseDto } from '@root/src/common/dto';
 import {
   ResponseService,
@@ -357,14 +357,9 @@ export class AuthService {
     }>
   > {
     const userExist: users = await this.userRepository.findByEmail(user.email);
-    if (!userExist)
-      throw new UnprocessableEntityException(
-        this._responseHandler.error(
-          ['Error'],
-          HttpStatusCode.UnprocessableEntity,
-          'This action can not be done',
-        ),
-      );
+    if (!userExist) {
+      return this.registerUserWithGoogle(user);
+    }
 
     return this.loginWithGoogle(userExist);
   }
@@ -386,6 +381,7 @@ export class AuthService {
       email: loginAuthDto.email,
       isActive: loginAuthDto.isActive,
       role: loginAuthDto.roleId,
+      isGoogleAccount: loginAuthDto.isGoogleAccount,
     };
     try {
       const { password: _password, ...userWithoutPassword } = loginAuthDto;
@@ -420,22 +416,21 @@ export class AuthService {
       };
     }>
   > {
-    const userRole: roles = await this.roleRepository.getDefaultRole();
-    const values: Partial<CreateAuthDto> = {
-      email: user.email,
-      username: user.username,
-    };
-
     try {
-      const userCreated: users = await this.userRepository.create(
-        values,
-        userRole.id,
-        true,
+      const role = await this.roleRepository.getDefaultRole();
+      const userCreated = await this.userRepository.create(
+        {
+          email: user.email,
+          username: user.username,
+        },
+        role.id,
       );
+
       const payload: JwtPayload = {
         id: userCreated.id,
         email: userCreated.email,
         isActive: userCreated.isActive,
+        isGoogleAccount: userCreated.isGoogleAccount,
         role: userCreated.roleId,
       };
 
@@ -500,5 +495,9 @@ export class AuthService {
     //   this._logger.error(error.message);
     //   throw new InternalServerErrorException('Something Wen Wrong');
     // }
+  }
+
+  activateUserWithGoogle(email: string): Promise<users> {
+    return this.userRepository.activeGoogleAccount(email);
   }
 }

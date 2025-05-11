@@ -3,4 +3,5 @@ export interface JwtPayload {
   email: string;
   isActive: boolean;
   role: number;
+  isGoogleAccount?: boolean;
 }
