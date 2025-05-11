@@ -20,6 +20,7 @@ import {
 import { UserSerialized } from '@root/src/common/types';
 import { HttpStatusCode } from 'axios';
 
+import { UpdateAuthDto } from './dto';
 import { ActivateUserDto } from './dto/activate-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateAuthDto } from './dto/create-auth.dto';
@@ -445,14 +446,18 @@ export class AuthService {
     );
   }
 
-  async getProfile(user: users): Promise<UserSerialized> {
+  async getProfile(user: users): Promise<DefultResponseDto<UserSerialized>> {
     const {
       password: _password,
       activationToken: _activationToken,
       resetPasswordToken: _resetPasswordToken,
       ...userWithoutPassword
     } = user;
-    return userWithoutPassword;
+    return this._responseHandler.sanitize(
+      userWithoutPassword,
+      ['User Found'],
+      HttpStatusCode.Ok,
+    );
   }
 
   async subscriptionToNotifications(
@@ -478,5 +483,23 @@ export class AuthService {
 
   activateUserWithGoogle(email: string): Promise<users> {
     return this.userRepository.activeGoogleAccount(email);
+  }
+  updateProfile(updateUserDto: UpdateAuthDto, user: users): Promise<users> {
+    try {
+      return this.userRepository.updateUser(user.id, updateUserDto);
+    } catch (error) {
+      this._logger.error('Something went wrong', {
+        stack: error.stack,
+        message: error.message,
+        context: AuthService.name,
+      });
+      throw new InternalServerErrorException(
+        this._responseHandler.error(
+          ['Error'],
+          HttpStatusCode.InternalServerError,
+          'Error trying to update user',
+        ),
+      );
+    }
   }
 }

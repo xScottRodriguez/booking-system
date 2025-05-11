@@ -33,7 +33,7 @@ import { validate } from 'class-validator';
 
 import { AuthService } from './auth.service';
 import { GetUser } from './decorators/get-user.decorator';
-import { CreateGoogleDto } from './dto';
+import { CreateGoogleDto, UpdateAuthDto } from './dto';
 import { ActivateUserDto } from './dto/activate-user.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateAuthDto } from './dto/create-auth.dto';
@@ -380,8 +380,17 @@ export class AuthController {
     new RoleAuthGuard(Roles.ADMIN, Roles.AUTHENTICATED),
   )
   @Get('/me')
-  async getProfile(@GetUser() user: users): Promise<UserSerialized> {
+  async getProfile(
+    @GetUser() user: users,
+  ): Promise<DefultResponseDto<UserSerialized>> {
     return await this.authService.getProfile(user);
+  }
+  @Patch('/me')
+  async updateProfile(
+    @Body() updateUserDto: UpdateAuthDto,
+    @GetUser() user: users,
+  ): Promise<UserSerialized> {
+    return await this.authService.updateProfile(updateUserDto, user);
   }
 
   @Post('/subscriptions')

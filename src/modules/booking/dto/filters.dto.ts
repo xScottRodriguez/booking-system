@@ -1,7 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 import { ReservationStatus } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, Matches } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsPhoneNumber,
+  IsString,
+  Matches,
+} from 'class-validator';
 
 export class FiltersDto {
   @ApiPropertyOptional({
@@ -58,5 +64,6 @@ export class FiltersDto {
 
   @IsOptional()
   @IsString()
+  @IsPhoneNumber('SV')
   clientPhone?: string;
 }

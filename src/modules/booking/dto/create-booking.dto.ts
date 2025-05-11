@@ -1,12 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import {
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Matches,
-} from 'class-validator';
+import { IsNotEmpty, IsNumber, IsString, Matches } from 'class-validator';
 export class CreateBookingDto {
   @ApiProperty({
     example: 1,
@@ -23,13 +17,8 @@ export class CreateBookingDto {
   @IsNotEmpty({
     message: 'required client',
   })
-  @IsString()
-  client: string;
-
-  @IsOptional()
-  @IsNotEmpty()
-  @IsString()
-  clientPhone?: string = undefined;
+  @IsNumber()
+  clientId: number;
 
   @ApiProperty({
     example: '2022-05-12',
